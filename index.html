@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#E0CFC3">
+    <meta name="theme-color" content="#2B3445">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <title>九州旅遊行程</title>
     
@@ -34,9 +34,11 @@
             -ms-overflow-style: none;  /* IE and Edge */
             scrollbar-width: none;  /* Firefox */
         }
+        /* Safe area support for mobile devices */
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
     </style>
 </head>
-<body class="bg-[#E0CFC3] font-sans">
+<body class="bg-[#F5EFE9] md:bg-[#E0CFC3] font-sans">
     
     <div id="root"></div>
 
@@ -50,8 +52,7 @@
           AlertOctagon, ChevronDown, ChevronUp 
         } from 'lucide-react';
 
-        // --- Firebase Configuration (GitHub Pages) ---
-        // 🚨 填寫您自己的 Firebase 設定檔，以啟用待辦事項雲端同步功能
+        // --- Firebase Configuration ---
         const firebaseConfig = {
           apiKey: "請填寫您的_API_KEY",
           authDomain: "請填寫您的_AUTH_DOMAIN",
@@ -79,8 +80,6 @@
         const appId = 'kyushu-trip-app';
 
         // --- Data & Content ---
-
-        // Flight Data
         const flightData = {
           outbound: {
             airline: "台灣虎航 IT240", 
@@ -194,10 +193,7 @@
             transport: "自駕 / 大眾",
             stay: "博多市區",
             activities: [
-              { 
-                time: "全日", 
-                event: "自由活動"
-              },
+              { time: "全日", event: "自由活動" },
               { time: "備註", event: "彈性行程" }
             ],
             highlight: "自由行"
@@ -240,7 +236,6 @@
           }
         ];
 
-        // Initial Checklist Data
         const initialChecklistData = [
           { id: 1, text: "Visit Japan Web 入境表單", checked: false, category: "文件", link: "https://www.vjw.digital.go.jp/main/#/vjwplo001" },
           { id: 2, text: "護照", checked: false, category: "文件" },
@@ -300,7 +295,7 @@
         const TabButton = ({ active, onClick, icon, label }) => (
           <button 
             onClick={onClick}
-            className={`flex flex-col items-center justify-center w-full py-2 transition-all duration-300 ${active ? 'translate-y-[-2px]' : 'opacity-60 hover:opacity-100'}`}
+            className={`flex flex-col items-center justify-center w-full md:w-24 py-2 transition-all duration-300 ${active ? 'md:-translate-y-1 scale-105' : 'opacity-60 hover:opacity-100'}`}
           >
             <div className={`${active ? 'text-[#E94D34]' : 'text-[#2B3445]'}`}>
               {icon}
@@ -333,7 +328,6 @@
         const FlightInfoBlock = ({ flight, type }) => {
           const isOutbound = type === 'outbound';
           const iconColor = isOutbound ? 'text-[#2B3445]' : 'text-[#E94D34]';
-          
           return (
             <div className={`bg-white p-5 rounded-xl border border-[#E0CFC3] shadow-[0_2px_8px_rgba(43,52,69,0.08)]`}>
               <div className="flex justify-between items-center mb-4">
@@ -376,7 +370,7 @@
 
         // --- Main App Component ---
         function App() {
-          const [activeTab, setActiveTab] = useState('flights');
+          const [activeTab, setActiveTab] = useState('itinerary'); // 設定行程為預設首頁
           const [checklist, setChecklist] = useState(initialChecklistData);
           const [showVegCard, setShowVegCard] = useState(false);
           const [flightView, setFlightView] = useState('me'); 
@@ -441,7 +435,6 @@
               setExchangeRate(rateInfo);
               setLoading(false);
             };
-
             fetchData();
           }, []);
 
@@ -461,190 +454,167 @@
                 }
               } else {
                 const initialSaveData = initialChecklistData.map(({ id, checked }) => ({ id, checked }));
-                setDoc(checklistDocRef, { items: initialSaveData }, { merge: true })
-                  .catch(err => console.error("Failed to init checklist doc", err));
+                setDoc(checklistDocRef, { items: initialSaveData }, { merge: true });
               }
-            }, (error) => {
-              console.error("Firestore snapshot error:", error);
-            });
+            }, (error) => console.error("Firestore snapshot error:", error));
 
             return () => unsubscribeSnapshot();
           }, [user]);
 
           const toggleCheck = async (id) => {
-            const newChecklist = checklist.map(item => 
-              item.id === id ? { ...item, checked: !item.checked } : item
-            );
+            const newChecklist = checklist.map(item => item.id === id ? { ...item, checked: !item.checked } : item);
             setChecklist(newChecklist);
-
             if (!user || !db) return;
             try {
                 const checklistDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'lists', 'checklist_shared');
-                const dataToSave = newChecklist.map(({ id, checked }) => ({ id, checked }));
-                await setDoc(checklistDocRef, { items: dataToSave }, { merge: true });
-            } catch (err) {
-                console.error("Failed to save checklist", err);
-            }
+                await setDoc(checklistDocRef, { items: newChecklist.map(({ id, checked }) => ({ id, checked })) }, { merge: true });
+            } catch (err) {}
           };
 
           const toggleChecklistExpand = (id) => setExpandedChecklistId(expandedChecklistId === id ? null : id);
           const toggleItineraryExpand = (id) => setExpandedItineraryId(expandedItineraryId === id ? null : id);
           const toggleGuideExpand = (idx) => setExpandedGuideIds(prev => ({ ...prev, [idx]: !prev[idx] }));
-          
-          const calculateProgress = () => {
-            const done = checklist.filter(i => i.checked).length;
-            return Math.round((done / checklist.length) * 100);
-          };
+          const calculateProgress = () => Math.round((checklist.filter(i => i.checked).length / checklist.length) * 100);
 
+          // ---------------------------------
+          // Views
+          // ---------------------------------
           const FlightsView = () => (
-            <div className="space-y-6 pb-24 px-4 pt-6">
-              <div className="flex p-1 bg-[#E0CFC3]/30 rounded-xl mb-6 shadow-inner border border-[#E0CFC3]">
-                <button 
-                  onClick={() => setFlightView('me')}
-                  className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${
-                    flightView === 'me' ? 'bg-[#2B3445] text-[#E0CFC3] shadow-md transform scale-[1.02]' : 'text-[#2B3445]/60 hover:text-[#2B3445]'
-                  }`}
-                >
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+              <div className="flex p-1 bg-white/50 backdrop-blur-sm rounded-xl mb-6 shadow-sm border border-[#E0CFC3]">
+                <button onClick={() => setFlightView('me')} className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${flightView === 'me' ? 'bg-[#2B3445] text-[#E0CFC3] shadow-md transform scale-[1.02]' : 'text-[#2B3445]/60 hover:text-[#2B3445]'}`}>
                   <User className="w-4 h-4" /> 詡歷
                 </button>
-                <button 
-                  onClick={() => setFlightView('others')}
-                  className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${
-                    flightView === 'others' ? 'bg-[#E94D34] text-white shadow-md transform scale-[1.02]' : 'text-[#2B3445]/60 hover:text-[#E94D34]'
-                  }`}
-                >
+                <button onClick={() => setFlightView('others')} className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${flightView === 'others' ? 'bg-[#E94D34] text-white shadow-md transform scale-[1.02]' : 'text-[#2B3445]/60 hover:text-[#E94D34]'}`}>
                   <Users className="w-4 h-4" /> 蔬琪、雅雅
                 </button>
               </div>
 
-              <div className="space-y-4 min-h-[300px]">
+              <div className="md:grid md:grid-cols-2 md:gap-8 space-y-4 md:space-y-0">
                 {flightView === 'me' ? (
-                  <div className="space-y-4">
-                     <div className="flex items-center gap-2 mb-2 ml-1">
-                        <span className="w-2 h-2 rounded-full bg-[#2B3445]"></span>
-                        <span className="text-xs font-bold text-[#2B3445] uppercase tracking-wider">去程 Outbound</span>
-                     </div>
-                     <FlightInfoBlock flight={flightData.outbound} type="outbound" />
-                     
-                     <div className="bg-[#E94D34]/10 border border-[#E94D34]/30 rounded-lg p-3 my-3">
-                        <div className="flex items-center gap-2 mb-2">
-                            <AlertTriangle className="w-4 h-4 text-[#E94D34]" />
-                            <span className="text-sm font-bold text-[#E94D34]">重要提醒</span>
+                  <>
+                     <div className="space-y-2">
+                        <div className="flex items-center gap-2 mb-3 ml-1">
+                            <span className="w-2 h-2 rounded-full bg-[#2B3445]"></span>
+                            <span className="text-xs font-bold text-[#2B3445] uppercase tracking-wider">去程 Outbound</span>
                         </div>
-                        <div className="space-y-2">
-                            <a href="https://www.vjw.digital.go.jp/main/#/vjwplo001" target="_blank" rel="noreferrer" className="flex items-center justify-between bg-white/50 p-2 rounded hover:bg-white transition-colors cursor-pointer group">
-                                <span className="text-xs font-medium text-[#2B3445] flex items-center gap-2">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-[#E94D34]"></span>
-                                    入境表單 (起飛前6hr)
-                                </span>
-                                <ExternalLink className="w-3 h-3 text-[#2B3445]/40 group-hover:text-[#E94D34]" />
-                            </a>
-                            <div className="flex items-center justify-between bg-white/50 p-2 rounded">
-                                <span className="text-xs font-medium text-[#2B3445] flex items-center gap-2">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-[#E94D34]"></span>
-                                    旅平險生效確認
-                                </span>
+                        <FlightInfoBlock flight={flightData.outbound} type="outbound" />
+                        <div className="bg-[#E94D34]/10 border border-[#E94D34]/30 rounded-lg p-3 mt-4">
+                            <div className="flex items-center gap-2 mb-2">
+                                <AlertTriangle className="w-4 h-4 text-[#E94D34]" />
+                                <span className="text-sm font-bold text-[#E94D34]">重要提醒</span>
+                            </div>
+                            <div className="space-y-2">
+                                <a href="https://www.vjw.digital.go.jp/main/#/vjwplo001" target="_blank" className="flex items-center justify-between bg-white/60 p-2 rounded hover:bg-white transition-colors cursor-pointer group">
+                                    <span className="text-xs font-medium text-[#2B3445] flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#E94D34]"></span>入境表單 (起飛前6hr)</span>
+                                    <ExternalLink className="w-3 h-3 text-[#2B3445]/40 group-hover:text-[#E94D34]" />
+                                </a>
                             </div>
                         </div>
                      </div>
-
-                     <div className="flex items-center gap-2 mb-2 mt-6 ml-1">
-                        <span className="w-2 h-2 rounded-full bg-[#E94D34]"></span>
-                        <span className="text-xs font-bold text-[#E94D34] uppercase tracking-wider">回程 Inbound</span>
+                     <div className="space-y-2">
+                        <div className="flex items-center gap-2 mb-3 mt-6 md:mt-0 ml-1">
+                            <span className="w-2 h-2 rounded-full bg-[#E94D34]"></span>
+                            <span className="text-xs font-bold text-[#E94D34] uppercase tracking-wider">回程 Inbound</span>
+                        </div>
+                        <FlightInfoBlock flight={flightData.inbound.user} type="inbound" />
                      </div>
-                     <FlightInfoBlock flight={flightData.inbound.user} type="inbound" />
-                  </div>
+                  </>
                 ) : (
-                  <div className="space-y-4">
-                     <div className="flex items-center gap-2 mb-2 ml-1">
-                        <span className="w-2 h-2 rounded-full bg-[#2B3445]"></span>
-                        <span className="text-xs font-bold text-[#2B3445] uppercase tracking-wider">去程 Outbound</span>
+                  <>
+                     <div className="space-y-2">
+                        <div className="flex items-center gap-2 mb-3 ml-1">
+                            <span className="w-2 h-2 rounded-full bg-[#2B3445]"></span>
+                            <span className="text-xs font-bold text-[#2B3445] uppercase tracking-wider">去程 Outbound</span>
+                        </div>
+                        <FlightInfoBlock flight={flightData.outbound} type="outbound" />
                      </div>
-                     <FlightInfoBlock flight={flightData.outbound} type="outbound" />
-                     
-                     <div className="flex items-center gap-2 mb-2 mt-6 ml-1">
-                        <span className="w-2 h-2 rounded-full bg-[#E94D34]"></span>
-                        <span className="text-xs font-bold text-[#E94D34] uppercase tracking-wider">回程 Inbound</span>
+                     <div className="space-y-2">
+                        <div className="flex items-center gap-2 mb-3 mt-6 md:mt-0 ml-1">
+                            <span className="w-2 h-2 rounded-full bg-[#E94D34]"></span>
+                            <span className="text-xs font-bold text-[#E94D34] uppercase tracking-wider">回程 Inbound</span>
+                        </div>
+                        <FlightInfoBlock flight={flightData.inbound.others} type="inbound" />
                      </div>
-                     <FlightInfoBlock flight={flightData.inbound.others} type="inbound" />
-                  </div>
+                  </>
                 )}
               </div>
             </div>
           );
 
           const ItineraryView = () => (
-            <div className="space-y-4 pb-24">
-              <div className="bg-[#2B3445] text-[#E0CFC3] p-6 rounded-b-[2rem] shadow-lg mb-6 border-b-4 border-[#E94D34]">
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+              <div className="md:hidden bg-[#2B3445] text-[#E0CFC3] p-6 rounded-b-[2rem] shadow-lg mb-6 border-b-4 border-[#E94D34] -mx-4 -mt-6">
                 <h1 className="text-2xl font-bold mb-1">每日行程 🗓️</h1>
                 <p className="text-[#E0CFC3]/80 text-sm">福岡 • 由布院 • 阿蘇火山</p>
               </div>
               
-              <div className="px-4 space-y-4">
+              <div className="space-y-4">
                 {itineraryData.map((day) => (
-                  <Card key={day.day} className="relative group">
-                    <div className={`absolute top-0 left-0 w-1.5 h-full ${day.highlight ? 'bg-[#E94D34]' : 'bg-[#2B3445]'}`}></div>
-                    <div className="p-4 pl-6">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs font-bold text-[#2B3445]/50 uppercase tracking-wider">Day {day.day}</span>
-                            <span className="text-xs font-bold text-[#2B3445]/70">{day.date}</span>
+                  <Card key={day.day} className="relative group overflow-visible transition-all hover:shadow-md">
+                    <div className={`absolute top-0 left-0 w-1.5 h-full ${day.highlight ? 'bg-[#E94D34]' : 'bg-[#2B3445]'} rounded-l-xl`}></div>
+                    <div className="p-4 pl-6 md:p-6 md:pl-8 flex flex-col md:flex-row md:items-stretch gap-4 md:gap-8">
+                      {/* Left Block (Desktop) / Top Block (Mobile) */}
+                      <div className="md:w-1/3 flex-shrink-0 border-b md:border-b-0 md:border-r border-[#E0CFC3]/50 pb-4 md:pb-0 md:pr-6">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xs font-bold text-[#2B3445]/50 uppercase tracking-wider">Day {day.day}</span>
+                              <span className="text-xs font-bold text-[#2B3445]/70">{day.date}</span>
+                            </div>
+                            <h3 className="text-xl md:text-2xl font-bold text-[#2B3445]">{day.title}</h3>
                           </div>
-                          <h3 className="text-lg font-bold text-[#2B3445]">{day.title}</h3>
+                          <div className="md:hidden">
+                             {day.transport.includes("CAR") || day.transport.includes("自駕") ? <Car className="w-5 h-5 text-[#E94D34]" /> : <MapPin className="w-5 h-5 text-[#E0CFC3]" />}
+                          </div>
                         </div>
-                        {day.transport.includes("CAR") || day.transport.includes("自駕") ? (
-                          <Car className="w-5 h-5 text-[#E94D34]" />
-                        ) : (
-                          <MapPin className="w-5 h-5 text-[#E0CFC3]" />
-                        )}
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          <Badge variant="beige">{day.stay}</Badge>
+                          {day.highlight && <Badge variant="outlineVermilion">★ {day.highlight}</Badge>}
+                        </div>
                       </div>
                       
-                      <div className="space-y-3 mt-3">
+                      {/* Right Block (Desktop) / Bottom Block (Mobile) */}
+                      <div className="flex-1 space-y-4 md:py-2">
                         {day.activities.map((act, idx) => {
                           const itemId = `${day.day}-${idx}`;
                           return (
-                            <div key={idx} className="flex flex-col">
-                              <div className="flex gap-3 text-sm items-start">
-                                <span className="text-[#2B3445]/50 min-w-[3rem] text-xs pt-0.5 font-mono">{act.time}</span>
-                                <div className="flex-1">
-                                  <span className="text-[#2B3445] font-medium flex items-center gap-2">
-                                    {act.link && !act.dropdown ? (
-                                      <a href={act.link} target="_blank" rel="noopener noreferrer" className="hover:text-[#E94D34] hover:underline flex items-center gap-1">
-                                        {act.event} <MapPin className="w-3 h-3 inline" />
-                                      </a>
-                                    ) : ( act.event )}
-                                    {act.dropdown && (
-                                      <button onClick={() => toggleItineraryExpand(itemId)} className="p-1 rounded-full bg-[#F5EFE9] text-[#2B3445] hover:bg-[#E0CFC3] transition-colors">
-                                        {expandedItineraryId === itemId ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                                      </button>
-                                    )}
+                            <div key={idx} className="flex gap-4 text-sm items-start">
+                              <span className="text-[#2B3445]/50 min-w-[3.5rem] text-xs pt-1 font-mono">{act.time}</span>
+                              <div className="flex-1 bg-white md:bg-[#F5EFE9]/50 p-3 rounded-lg border border-[#E0CFC3]/40">
+                                <div className="text-[#2B3445] font-medium flex items-center justify-between gap-2">
+                                  <span className="flex items-center gap-1">
+                                      {act.link && !act.dropdown ? (
+                                        <a href={act.link} target="_blank" rel="noopener noreferrer" className="hover:text-[#E94D34] hover:underline flex items-center gap-1">
+                                          {act.event} <ExternalLink className="w-3 h-3 text-[#E94D34] inline" />
+                                        </a>
+                                      ) : ( act.event )}
                                   </span>
-                                  {act.dropdown && expandedItineraryId === itemId && (
-                                    <div className="mt-2 bg-[#F5EFE9] rounded-lg border border-[#E0CFC3] p-2">
-                                      {act.dropdown.map((dropItem, dropIdx) => (
-                                        <div key={dropIdx} className="py-1">
-                                          {dropItem.link ? (
-                                            <a href={dropItem.link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs font-bold text-[#E94D34] hover:underline">
-                                              <MapPin className="w-3 h-3" /> {dropItem.text}
-                                            </a>
-                                          ) : (
-                                            <p className="text-xs text-[#2B3445]/80 leading-relaxed pl-1 border-l-2 border-[#E94D34]">{dropItem.text}</p>
-                                          )}
-                                        </div>
-                                      ))}
-                                    </div>
+                                  {act.dropdown && (
+                                    <button onClick={() => toggleItineraryExpand(itemId)} className="p-1.5 rounded-full bg-[#E0CFC3]/30 text-[#2B3445] hover:bg-[#E0CFC3] transition-colors">
+                                      {expandedItineraryId === itemId ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                    </button>
                                   )}
                                 </div>
+                                {act.dropdown && expandedItineraryId === itemId && (
+                                  <div className="mt-3 pt-3 border-t border-[#E0CFC3]/50">
+                                    {act.dropdown.map((dropItem, dropIdx) => (
+                                      <div key={dropIdx} className="py-1">
+                                        {dropItem.link ? (
+                                          <a href={dropItem.link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs font-bold text-[#E94D34] hover:underline bg-white p-2 rounded border border-[#E0CFC3]/40 inline-flex">
+                                            <MapPin className="w-3 h-3" /> {dropItem.text}
+                                          </a>
+                                        ) : (
+                                          <p className="text-xs text-[#2B3445]/80 leading-relaxed pl-2 border-l-2 border-[#E94D34]">{dropItem.text}</p>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                             </div>
                           );
                         })}
-                      </div>
-
-                      <div className="mt-4 pt-3 border-t border-[#E0CFC3]/50 flex gap-2 overflow-x-auto no-scrollbar">
-                        <Badge variant="beige">{day.stay}</Badge>
-                        {day.highlight && <Badge variant="outlineVermilion">★ {day.highlight}</Badge>}
                       </div>
                     </div>
                   </Card>
@@ -654,122 +624,128 @@
           );
 
           const NotesView = () => (
-            <div className="space-y-4 pb-24 px-4 pt-6">
-              <h2 className="text-xl font-bold text-[#2B3445] mb-4 flex items-center gap-2">
-                <Info className="w-5 h-5 text-[#E94D34]" /> 注意事項 & 工具
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+              <h2 className="text-2xl font-bold text-[#2B3445] mb-6 flex items-center gap-2">
+                <Info className="w-6 h-6 text-[#E94D34]" /> 注意事項 & 工具
               </h2>
               
-              <Card className="bg-[#F5EFE9] border-[#E0CFC3] cursor-pointer mb-6 hover:border-[#E94D34] transition-colors">
-                <div className="p-5" onClick={() => setShowVegCard(true)}>
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="p-2 bg-[#E0CFC3] rounded-full text-[#2B3445]">
-                      <Utensils className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-[#2B3445]">飲食溝通卡</h3>
-                      <p className="text-xs text-[#2B3445]/60">點擊放大顯示給店員</p>
-                    </div>
-                  </div>
-                  <p className="text-sm text-[#2B3445]/80 bg-white p-3 rounded border border-[#E0CFC3] italic">
-                    "不好意思，有蔥、洋蔥還有大蒜嗎..."
-                  </p>
-                </div>
-              </Card>
-
-              <div className="grid gap-3 mt-4">
-                {driveGuideData.map((guide, idx) => {
-                   const isToggleable = Array.isArray(guide.content); 
-                   const isExpanded = expandedGuideIds[idx] !== undefined ? expandedGuideIds[idx] : !isToggleable; 
-                   return (
-                  <Card key={idx}>
-                    <div className="p-4">
-                      <div className="flex items-center justify-between mb-2 cursor-pointer" onClick={() => isToggleable && toggleGuideExpand(idx)}>
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-[#E0CFC3]/30 rounded-full">{guide.icon}</div>
-                          <h3 className="font-bold text-[#2B3445]">{guide.title}</h3>
-                        </div>
-                        {isToggleable && (
-                          <div className="text-[#2B3445]/60">
-                            {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                  {/* Veg Card */}
+                  <Card className="bg-gradient-to-br from-[#F5EFE9] to-[#E0CFC3]/30 border-[#E0CFC3] cursor-pointer hover:border-[#E94D34] transition-all hover:shadow-md transform hover:-translate-y-1">
+                    <div className="p-6 h-full flex flex-col justify-between" onClick={() => setShowVegCard(true)}>
+                      <div>
+                          <div className="flex items-center gap-3 mb-4">
+                            <div className="p-3 bg-[#2B3445] rounded-xl text-[#E0CFC3]">
+                              <Utensils className="w-6 h-6" />
+                            </div>
+                            <div>
+                              <h3 className="font-bold text-lg text-[#2B3445]">飲食溝通卡</h3>
+                              <p className="text-xs text-[#2B3445]/60 mt-0.5">點擊放大顯示給店員</p>
+                            </div>
                           </div>
-                        )}
+                          <p className="text-sm text-[#2B3445]/80 bg-white p-4 rounded-lg border border-[#E0CFC3] shadow-inner italic">
+                            "不好意思，有蔥、洋蔥還有大蒜嗎..."
+                          </p>
                       </div>
-                      
-                      {isExpanded && (
-                      <div className="pl-[3.25rem]">
-                        {Array.isArray(guide.content) ? (
-                          <div className="space-y-4 mt-2">
-                            {guide.content.map((item, i) => (
-                              <div key={i} className="relative">
-                                <div className="flex items-baseline gap-1.5">
-                                    <span className="text-[#E94D34] font-black text-sm">{i + 1}.</span>
-                                    <span className="font-bold text-[#2B3445] text-sm">{item.title}</span>
-                                </div>
-                                <p className="text-xs text-[#2B3445]/70 mt-1 pl-4 leading-relaxed">{item.desc}</p>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-sm text-[#2B3445]/70 leading-relaxed">{guide.content}</p>
-                        )}
-                      </div>
-                      )}
                     </div>
                   </Card>
-                )})}
+
+                  {/* Guides */}
+                  {driveGuideData.map((guide, idx) => {
+                     const isToggleable = Array.isArray(guide.content); 
+                     const isExpanded = expandedGuideIds[idx] !== undefined ? expandedGuideIds[idx] : true; // 電腦版預設展開
+                     return (
+                    <Card key={idx} className="md:col-span-2 lg:col-span-2 h-fit">
+                      <div className="p-6">
+                        <div className="flex items-center justify-between mb-4 cursor-pointer" onClick={() => isToggleable && toggleGuideExpand(idx)}>
+                          <div className="flex items-center gap-3">
+                            <div className="p-3 bg-[#E94D34]/10 rounded-xl">{guide.icon}</div>
+                            <h3 className="font-bold text-lg text-[#2B3445]">{guide.title}</h3>
+                          </div>
+                          {isToggleable && (
+                            <div className="text-[#2B3445]/60 p-1 bg-[#F5EFE9] rounded-full md:hidden">
+                              {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                            </div>
+                          )}
+                        </div>
+                        
+                        {(isExpanded || window.innerWidth >= 768) && (
+                        <div className="pt-2 border-t border-[#E0CFC3]/50">
+                          {Array.isArray(guide.content) ? (
+                            <div className="grid md:grid-cols-2 gap-4 mt-4">
+                              {guide.content.map((item, i) => (
+                                <div key={i} className="bg-[#F5EFE9]/50 p-3 rounded-lg">
+                                  <div className="flex items-baseline gap-1.5 mb-1">
+                                      <span className="text-[#E94D34] font-black text-sm">{i + 1}.</span>
+                                      <span className="font-bold text-[#2B3445] text-sm">{item.title}</span>
+                                  </div>
+                                  <p className="text-xs text-[#2B3445]/70 pl-4 leading-relaxed">{item.desc}</p>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-[#2B3445]/70 leading-relaxed mt-4">{guide.content}</p>
+                          )}
+                        </div>
+                        )}
+                      </div>
+                    </Card>
+                  )})}
               </div>
             </div>
           );
 
           const ChecklistView = () => (
-            <div className="space-y-4 pb-24 px-4 pt-6">
-              <div className="flex justify-between items-end mb-4">
-                <h2 className="text-xl font-bold text-[#2B3445] flex items-center gap-2">
-                    <CheckSquare className="w-5 h-5 text-[#E94D34]" /> 待辦事項
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+              <div className="flex justify-between items-end mb-2">
+                <h2 className="text-2xl font-bold text-[#2B3445] flex items-center gap-2">
+                    <CheckSquare className="w-6 h-6 text-[#E94D34]" /> 待辦事項
                 </h2>
-                <span className="text-sm font-bold text-[#E94D34]">{calculateProgress()}% 完成</span>
+                <span className="text-sm font-bold bg-[#E94D34] text-white px-3 py-1 rounded-full">{calculateProgress()}% 完成</span>
               </div>
 
-              <div className="w-full bg-[#E0CFC3] rounded-full h-2.5 mb-6">
-                <div className="bg-[#2B3445] h-2.5 rounded-full transition-all duration-500" style={{ width: `${calculateProgress()}%` }}></div>
+              <div className="w-full bg-[#E0CFC3] rounded-full h-3 mb-8 overflow-hidden shadow-inner">
+                <div className="bg-[#2B3445] h-3 rounded-full transition-all duration-700 ease-out" style={{ width: `${calculateProgress()}%` }}></div>
               </div>
 
-              <div className="space-y-2">
+              <div className="grid md:grid-cols-2 gap-4">
                 {checklist.map((item) => (
                   <div key={item.id} onClick={() => toggleCheck(item.id)}
-                    className={`flex flex-col p-4 rounded-xl border transition-all cursor-pointer select-none ${
-                      item.checked ? 'bg-[#E0CFC3]/30 border-transparent' : 'bg-white border-[#E0CFC3] hover:border-[#2B3445]'
+                    className={`flex flex-col p-5 rounded-xl border transition-all cursor-pointer select-none hover:shadow-md ${
+                      item.checked ? 'bg-[#E0CFC3]/30 border-transparent opacity-70' : 'bg-white border-[#E0CFC3] hover:border-[#2B3445]'
                     }`}
                   >
-                    <div className="flex items-center w-full">
-                      <div className={`flex-shrink-0 w-5 h-5 rounded border flex items-center justify-center mr-3 transition-colors ${
+                    <div className="flex items-start w-full">
+                      <div className={`flex-shrink-0 w-6 h-6 rounded-md border-2 flex items-center justify-center mr-4 transition-colors mt-0.5 ${
                         item.checked ? 'bg-[#2B3445] border-[#2B3445]' : 'border-[#E0CFC3]'
                       }`}>
-                        {item.checked && <CheckSquare className="w-3.5 h-3.5 text-[#E0CFC3]" />}
+                        {item.checked && <CheckSquare className="w-4 h-4 text-[#E0CFC3]" />}
                       </div>
                       <div className="flex-1">
-                        <p className={`text-sm font-bold ${item.checked ? 'text-[#2B3445]/40 line-through' : 'text-[#2B3445]'}`}>{item.text}</p>
+                        <p className={`text-base font-bold mb-2 ${item.checked ? 'text-[#2B3445]/40 line-through' : 'text-[#2B3445]'}`}>{item.text}</p>
+                        
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[10px] text-[#2B3445]/70 bg-[#F5EFE9] px-2 py-1 rounded font-bold tracking-wider">{item.category}</span>
+                          {item.link && (
+                              <a href={item.link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="flex items-center gap-1 text-[10px] font-bold text-white bg-[#E94D34] px-2 py-1 rounded-full hover:bg-[#D63E26] transition-colors shadow-sm">
+                                  🔗 前往連結
+                              </a>
+                          )}
+                        </div>
                       </div>
                       {item.details && (
-                        <button onClick={(e) => { e.stopPropagation(); toggleChecklistExpand(item.id); }} className="p-1 ml-2 text-[#2B3445]/60 hover:text-[#E94D34] transition-colors">
+                        <button onClick={(e) => { e.stopPropagation(); toggleChecklistExpand(item.id); }} className="p-2 ml-2 bg-[#F5EFE9] rounded-full text-[#2B3445]/60 hover:text-[#E94D34] transition-colors">
                           {expandedChecklistId === item.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                         </button>
                       )}
                     </div>
 
-                    <div className="flex items-center justify-between mt-1 pl-8">
-                      <span className="text-[10px] text-[#2B3445]/60 bg-[#E0CFC3]/30 px-1.5 py-0.5 rounded inline-block">{item.category}</span>
-                      {item.link && (
-                          <a href={item.link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="flex items-center gap-1 text-[10px] font-bold text-[#E94D34] bg-[#F5EFE9] px-2 py-1 rounded-full hover:bg-[#E0CFC3]/50 transition-colors">
-                              🔗 開啟連結
-                          </a>
-                      )}
-                    </div>
-
                     {expandedChecklistId === item.id && item.details && (
-                        <div className="mt-3 pl-8 text-xs text-[#2B3445]/80 bg-[#F5EFE9] p-3 rounded-lg border border-[#E0CFC3]">
+                        <div className="mt-4 pt-4 border-t border-[#E0CFC3]/50 text-sm text-[#2B3445]/80 bg-[#F5EFE9]/50 p-4 rounded-lg">
                             {item.details.map((detail, idx) => (
-                                <p key={idx} className="mb-1 leading-relaxed">{detail}</p>
+                                <p key={idx} className="mb-1.5 leading-relaxed flex items-start gap-2">
+                                  <span className="text-[#E94D34] mt-1">•</span> <span>{detail.replace('🔸 ', '').replace('   - ', '')}</span>
+                                </p>
                             ))}
                         </div>
                     )}
@@ -779,90 +755,108 @@
             </div>
           );
 
+          // ---------------------------------
+          // Layout
+          // ---------------------------------
           return (
-            <div className="bg-[#E0CFC3] min-h-screen font-sans max-w-md mx-auto relative shadow-2xl overflow-hidden">
-              <div className="h-full overflow-y-auto pb-20 no-scrollbar">
-                {activeTab === 'flights' && (
-                    <div className="bg-[#2B3445] pt-6 pb-12 px-6 rounded-b-[2.5rem] mb-[-2rem] relative z-0">
-                        <div className="grid grid-cols-2 gap-4 mb-2">
-                            <div className="bg-[#E0CFC3]/10 border border-[#E0CFC3]/20 rounded-2xl p-3 flex flex-col items-center justify-center backdrop-blur-sm">
-                                <div className="flex items-center gap-1.5 mb-1">
-                                    <CloudSun className="w-5 h-5 text-[#E94D34]" />
-                                    <span className="text-[#E0CFC3] text-xs font-bold">福岡天氣</span>
-                                </div>
-                                {loading ? (
-                                  <RefreshCw className="w-6 h-6 text-[#E0CFC3] animate-spin my-1" />
-                                ) : (
-                                  <>
-                                    <div className="text-2xl font-black text-white">{weatherData?.temp ?? '--'}°<span className="text-sm font-normal text-[#E0CFC3]/80">C</span></div>
-                                    <span className="text-[10px] text-[#E0CFC3]/60 mt-0.5">{weatherData?.desc ?? '載入中'}</span>
-                                  </>
-                                )}
-                            </div>
+            <div className="min-h-screen md:h-screen w-full relative flex flex-col md:flex-row overflow-hidden selection:bg-[#E94D34] selection:text-white">
+              
+              {/* --- Sidebar (Desktop) / Top Header (Mobile) --- */}
+              <div className="bg-[#2B3445] md:w-80 md:h-full flex-shrink-0 pt-8 pb-12 md:pb-8 px-6 md:px-8 rounded-b-[2.5rem] md:rounded-none md:rounded-r-[2.5rem] relative z-20 shadow-[0_0_40px_rgba(0,0,0,0.2)] flex flex-col transition-all">
+                  <div className="flex justify-between items-start mb-8 md:mb-12">
+                      <div>
+                        <h1 className="text-3xl md:text-4xl font-black text-[#E0CFC3] tracking-tight leading-none mb-2">九州<br className="hidden md:block"/>之旅</h1>
+                        <p className="text-[#E0CFC3]/60 text-xs font-bold tracking-widest uppercase">Fukuoka Trip</p>
+                      </div>
+                      <span className="text-[#E94D34] font-black text-xl bg-[#E0CFC3]/10 px-3 py-1 rounded-lg">2026</span>
+                  </div>
 
-                            <div className="bg-[#E0CFC3]/10 border border-[#E0CFC3]/20 rounded-2xl p-3 flex flex-col items-center justify-center backdrop-blur-sm">
-                                <div className="flex items-center gap-1.5 mb-1">
-                                    <Coins className="w-4 h-4 text-[#E94D34]" />
-                                    <span className="text-[#E0CFC3] text-xs font-bold">即時匯率</span>
-                                </div>
-                                {loading ? (
-                                  <RefreshCw className="w-6 h-6 text-[#E0CFC3] animate-spin my-1" />
-                                ) : (
-                                  <>
-                                    <div className="text-2xl font-black text-white">{exchangeRate ? exchangeRate.toFixed(3) : '--'}</div>
-                                    <span className="text-[10px] text-[#E0CFC3]/60 mt-0.5">JPY / TWD</span>
-                                  </>
-                                )}
+                  <div className="grid grid-cols-2 md:grid-cols-1 gap-4 mb-4">
+                      <div className="bg-[#E0CFC3]/10 border border-[#E0CFC3]/10 hover:border-[#E0CFC3]/30 transition-colors rounded-2xl p-4 flex flex-col md:flex-row items-center md:justify-between backdrop-blur-md">
+                          <div className="flex items-center gap-2 mb-2 md:mb-0">
+                              <CloudSun className="w-5 h-5 text-[#E94D34]" />
+                              <span className="text-[#E0CFC3] text-xs font-bold">福岡天氣</span>
+                          </div>
+                          {loading ? <RefreshCw className="w-5 h-5 text-[#E0CFC3] animate-spin" /> : (
+                            <div className="text-center md:text-right">
+                              <div className="text-2xl font-black text-white">{weatherData?.temp ?? '--'}°<span className="text-sm font-normal text-[#E0CFC3]/80">C</span></div>
+                              <span className="text-[10px] text-[#E0CFC3]/60">{weatherData?.desc ?? '--'}</span>
                             </div>
-                        </div>
-                        <p className="text-center text-[#E0CFC3]/40 text-[10px] mt-2 flex items-center justify-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            <span>數據更新中...</span>
-                        </p>
-                    </div>
-                )}
-                
-                <div className="relative z-10">
-                    {activeTab === 'flights' && <FlightsView />}
-                    {activeTab === 'itinerary' && <ItineraryView />}
-                    {activeTab === 'notes' && <NotesView />}
-                    {activeTab === 'checklist' && <ChecklistView />}
-                </div>
+                          )}
+                      </div>
+
+                      <div className="bg-[#E0CFC3]/10 border border-[#E0CFC3]/10 hover:border-[#E0CFC3]/30 transition-colors rounded-2xl p-4 flex flex-col md:flex-row items-center md:justify-between backdrop-blur-md">
+                          <div className="flex items-center gap-2 mb-2 md:mb-0">
+                              <Coins className="w-5 h-5 text-[#E94D34]" />
+                              <span className="text-[#E0CFC3] text-xs font-bold">即時匯率</span>
+                          </div>
+                          {loading ? <RefreshCw className="w-5 h-5 text-[#E0CFC3] animate-spin" /> : (
+                            <div className="text-center md:text-right">
+                              <div className="text-2xl font-black text-white">{exchangeRate ? exchangeRate.toFixed(3) : '--'}</div>
+                              <span className="text-[10px] text-[#E0CFC3]/60">JPY/TWD</span>
+                            </div>
+                          )}
+                      </div>
+                  </div>
+                  <p className="text-center md:text-left text-[#E0CFC3]/40 text-[10px] mt-2 flex items-center justify-center md:justify-start gap-1">
+                      <Clock className="w-3 h-3" /> <span>資料自動更新中</span>
+                  </p>
+
+                  {/* Desktop Only Extra Info */}
+                  <div className="hidden md:block mt-auto text-[#E0CFC3]/40 text-xs leading-relaxed border-t border-[#E0CFC3]/20 pt-6">
+                      <p className="font-bold text-[#E0CFC3]/70 mb-2">同行夥伴</p>
+                      <div className="flex items-center gap-3">
+                          <span className="w-8 h-8 rounded-full bg-[#E0CFC3]/20 flex items-center justify-center font-bold text-white">詡</span>
+                          <span className="w-8 h-8 rounded-full bg-[#E0CFC3]/20 flex items-center justify-center font-bold text-white -ml-2 border border-[#2B3445]">蔬</span>
+                          <span className="w-8 h-8 rounded-full bg-[#E0CFC3]/20 flex items-center justify-center font-bold text-white -ml-2 border border-[#2B3445]">雅</span>
+                      </div>
+                  </div>
+              </div>
+              
+              {/* --- Main Content Area --- */}
+              <div className="flex-1 w-full md:h-full overflow-y-auto no-scrollbar pb-32 md:pb-32 px-4 md:px-12 lg:px-20 pt-6 md:pt-12 relative z-10 bg-[#F5EFE9] md:bg-[#E0CFC3]">
+                  <div className="max-w-5xl mx-auto">
+                      {activeTab === 'itinerary' && <ItineraryView />}
+                      {activeTab === 'flights' && <FlightsView />}
+                      {activeTab === 'notes' && <NotesView />}
+                      {activeTab === 'checklist' && <ChecklistView />}
+                  </div>
               </div>
 
-              <div className="fixed bottom-0 w-full max-w-md bg-white/95 backdrop-blur-md border-t border-[#E0CFC3] pb-6 pt-2 px-4 flex justify-between z-40 shadow-[0_-4px_10px_rgba(43,52,69,0.05)]">
-                <TabButton active={activeTab === 'flights'} onClick={() => setActiveTab('flights')} icon={<Plane className="w-6 h-6" />} label="航班" />
-                <TabButton active={activeTab === 'itinerary'} onClick={() => setActiveTab('itinerary')} icon={<Calendar className="w-6 h-6" />} label="行程" />
-                <TabButton active={activeTab === 'notes'} onClick={() => setActiveTab('notes')} icon={<FileText className="w-6 h-6" />} label="提醒" />
-                <TabButton active={activeTab === 'checklist'} onClick={() => setActiveTab('checklist')} icon={<CheckSquare className="w-6 h-6" />} label="待辦" />
+              {/* --- Floating Bottom Navigation --- */}
+              <div className="fixed bottom-0 left-0 w-full md:w-auto md:left-[calc(50%+10rem)] md:-translate-x-1/2 md:bottom-8 bg-white/95 md:bg-white/80 md:backdrop-blur-xl border-t md:border border-[#E0CFC3] pb-safe pt-2 md:py-2 px-4 md:px-6 flex justify-between md:justify-center md:gap-8 z-40 md:rounded-full md:shadow-[0_20px_40px_rgba(43,52,69,0.15)] transition-all">
+                <TabButton active={activeTab === 'itinerary'} onClick={() => setActiveTab('itinerary')} icon={<Calendar className="w-6 h-6 md:w-5 md:h-5" />} label="行程" />
+                <TabButton active={activeTab === 'flights'} onClick={() => setActiveTab('flights')} icon={<Plane className="w-6 h-6 md:w-5 md:h-5" />} label="航班" />
+                <TabButton active={activeTab === 'notes'} onClick={() => setActiveTab('notes')} icon={<FileText className="w-6 h-6 md:w-5 md:h-5" />} label="提醒" />
+                <TabButton active={activeTab === 'checklist'} onClick={() => setActiveTab('checklist')} icon={<CheckSquare className="w-6 h-6 md:w-5 md:h-5" />} label="待辦" />
               </div>
 
+              {/* --- Veg Modal --- */}
               {showVegCard && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#2B3445]/90 p-6 backdrop-blur-sm" onClick={() => setShowVegCard(false)}>
-                  <div className="bg-white p-6 rounded-2xl w-full max-w-sm shadow-2xl transform transition-all scale-100 border-4 border-[#E94D34]" onClick={e => e.stopPropagation()}>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#2B3445]/80 p-6 backdrop-blur-sm animate-in fade-in" onClick={() => setShowVegCard(false)}>
+                  <div className="bg-white p-6 md:p-8 rounded-2xl w-full max-w-md shadow-2xl transform transition-all scale-100 border-4 border-[#E94D34]" onClick={e => e.stopPropagation()}>
                     <div className="flex justify-between items-center mb-6 border-b border-[#E0CFC3] pb-4">
-                      <h3 className="text-xl font-bold text-[#2B3445]">飲食需求卡</h3>
-                      <button onClick={() => setShowVegCard(false)} className="p-2 bg-[#E0CFC3]/30 rounded-full hover:bg-[#E0CFC3]">
+                      <h3 className="text-2xl font-black text-[#2B3445]">飲食需求卡</h3>
+                      <button onClick={() => setShowVegCard(false)} className="p-2 bg-[#E0CFC3]/30 rounded-full hover:bg-[#E0CFC3] transition-colors">
                         <X className="w-5 h-5 text-[#2B3445]" />
                       </button>
                     </div>
                     
                     <div className="space-y-6">
-                      <div className="p-4 bg-[#F5EFE9] rounded-xl border-l-4 border-[#E94D34]">
-                        <p className="text-xs text-[#2B3445]/50 mb-1 uppercase tracking-wider font-bold">Japanese</p>
-                        <p className="text-lg font-bold text-[#2B3445] leading-relaxed">
+                      <div className="p-5 bg-[#F5EFE9] rounded-xl border-l-4 border-[#E94D34]">
+                        <p className="text-xs text-[#2B3445]/50 mb-2 uppercase tracking-wider font-bold">Japanese</p>
+                        <p className="text-xl font-bold text-[#2B3445] leading-relaxed">
                           すみません、<br/>ネギや玉ねぎ、にんにくなど<br/>入っていますか。<br/>それも食べられませんので、<br/>入っていれば、抜いていただけませんか。
                         </p>
                       </div>
                       
-                      <div className="p-4 bg-white rounded-xl border border-[#E0CFC3] border-l-4 border-l-[#2B3445]">
-                        <p className="text-xs text-[#2B3445]/50 mb-1 uppercase tracking-wider font-bold">Chinese (Traditional)</p>
-                        <p className="text-base text-[#2B3445]">
+                      <div className="p-5 bg-white rounded-xl border border-[#E0CFC3] border-l-4 border-l-[#2B3445]">
+                        <p className="text-xs text-[#2B3445]/50 mb-2 uppercase tracking-wider font-bold">Chinese</p>
+                        <p className="text-base font-medium text-[#2B3445]">
                           不好意思，請問有加蔥、洋蔥或大蒜嗎？<br/>這些我也沒辦法吃。<br/>如果有的話，可以幫我拿掉嗎？
                         </p>
                       </div>
                     </div>
-                    <p className="text-center text-xs text-[#2B3445]/40 mt-6">請出示此畫面給餐廳服務人員確認</p>
                   </div>
                 </div>
               )}
@@ -870,7 +864,6 @@
           );
         }
 
-        // Render App
         const root = createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
