@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#E0CFC3">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>九州旅遊行程</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script type="importmap">
+      {
+        "imports": {
+          "react": "https://esm.sh/react@18.2.0",
+          "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+          "lucide-react": "https://esm.sh/lucide-react@0.292.0",
+          "firebase/app": "https://esm.sh/firebase@10.7.1/app",
+          "firebase/auth": "https://esm.sh/firebase@10.7.1/auth",
+          "firebase/firestore": "https://esm.sh/firebase@10.7.1/firestore"
+        }
+      }
+    </script>
+    
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        /* Hide scrollbar for Chrome, Safari and Opera */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        /* Hide scrollbar for IE, Edge and Firefox */
+        .no-scrollbar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+    </style>
+</head>
+<body class="bg-[#E0CFC3] font-sans">
+    
+    <div id="root"></div>
+
+    <script type="text/babel" data-type="module">
+        import React, { useState, useEffect } from 'react';
+        import { createRoot } from 'react-dom/client';
+        import { 
+          MapPin, Calendar, CheckSquare, Car, Info, CreditCard, Home, Navigation, 
+          AlertTriangle, ExternalLink, Utensils, Plane, Menu, X, Phone, Clock, 
+          Users, FileText, User, Luggage, CloudSun, Coins, RefreshCw, Link as LinkIcon, 
+          AlertOctagon, ChevronDown, ChevronUp 
+        } from 'lucide-react';
+
+        // --- Firebase Configuration (GitHub Pages) ---
+        // 🚨 填寫您自己的 Firebase 設定檔，以啟用待辦事項雲端同步功能
+        const firebaseConfig = {
+          apiKey: "請填寫您的_API_KEY",
+          authDomain: "請填寫您的_AUTH_DOMAIN",
+          projectId: "請填寫您的_PROJECT_ID",
+          storageBucket: "請填寫您的_STORAGE_BUCKET",
+          messagingSenderId: "請填寫您的_MESSAGING_SENDER_ID",
+          appId: "請填寫您的_APP_ID"
+        };
+        
+        import { initializeApp } from 'firebase/app';
+        import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
+        import { getFirestore, doc, onSnapshot, setDoc } from 'firebase/firestore';
+
+        let app, auth, db;
+        try {
+            if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "請填寫您的_API_KEY") {
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+            }
+        } catch (error) {
+            console.warn("Firebase 初始化失敗，雲端同步功能將暫時停用", error);
+        }
+        
+        const appId = 'kyushu-trip-app';
+
+        // --- Data & Content ---
+
+        // Flight Data
+        const flightData = {
+          outbound: {
+            airline: "台灣虎航 IT240", 
+            date: "2026/05/08 (五)",
+            departure: { code: "TPE", time: "06:40", city: "台北", terminal: "第一航廈" },
+            arrival: { code: "FUK", time: "10:05", city: "福岡", terminal: "國際航廈" },
+            baggage: "手提10KG + 托運20KG"
+          },
+          inbound: {
+            user: {
+              airline: "台灣虎航 IT241",
+              date: "2026/05/13 (三)", 
+              departure: { code: "FUK", time: "10:55", city: "福岡", terminal: "國際航廈" },
+              arrival: { code: "TPE", time: "12:35", city: "台北", terminal: "第一航廈" },
+              baggage: "手提10KG + 托運20KG"
+            },
+            others: {
+              airline: "台灣虎航 IT241",
+              date: "2026/05/15 (五)", 
+              departure: { code: "FUK", time: "10:55", city: "福岡", terminal: "國際航廈" },
+              arrival: { code: "TPE", time: "12:35", city: "台北", terminal: "第一航廈" },
+              baggage: "手提10KG + 托運20KG"
+            }
+          }
+        };
+
+        const itineraryData = [
+          {
+            day: 1,
+            date: "5/8 (五)",
+            title: "抵達福岡",
+            transport: "BUS (#37 #39)",
+            stay: "Cherim Hakata",
+            activities: [
+              { time: "10:05", event: "抵達福岡機場 (FUK)" },
+              { time: "上午", event: "巴士 (#37, #39) 至 Toko-cho 下車" },
+              { time: "住宿", event: "Check-in: Cherim Hakata" }
+            ],
+            highlight: "機場接送"
+          },
+          {
+            day: 2,
+            date: "5/9 (六)",
+            title: "福岡市區探索",
+            transport: "大眾交通",
+            stay: "Cherim Hakata",
+            activities: [
+              { time: "早餐", event: "Robata no Ito Okashi (需預約)", link: "https://www.tablecheck.com/zh-TW/robatano-itookashi/reserve/landing?utm_source=google" },
+              { time: "全日", event: "購物行程" }
+            ],
+            highlight: "爐端燒早餐 / 購物"
+          },
+          {
+            day: 3,
+            date: "5/10 (日)",
+            title: "自駕啟程：日田與由布院",
+            transport: "RENT CAR",
+            stay: "Yufuin Ryokan Nogiku (野菊)",
+            activities: [
+              { 
+                time: "上午", 
+                event: "klook取車",
+                dropdown: [
+                  { text: "訂單確認編號：YGZ202175" },
+                  { text: "取車日期＆時間：2026年5月10日 10:00 AM" },
+                  { text: "還車日期＆時間：2026年5月11日 20:00 PM" },
+                  { text: "租車公司：KS Rent A Car" },
+                  { text: "取／還車門市資料" },
+                  { text: "地址：3 Chome-2-2 Naka, Hakata Ward, Fukuoka,福岡,日本", link: "https://maps.app.goo.gl/HznFy6St4aXYeQbs6" },
+                  { text: "營業時間：08:00-20:00" },
+                  { text: "電話號碼：81+8098570393" }
+                ]
+              },
+              { time: "下午", event: "前往豆田町 (車程約 1.5 hr)" },
+              { time: "移動", event: "前往由布院 (車程約 1 hr)" },
+              { time: "住宿", event: "Yufuin Ryokan Nogiku (野菊)", link: "https://maps.app.goo.gl/HZ2oiWF1Mz7jqJRUA" }
+            ],
+            highlight: "豆田町 / 由布院"
+          },
+          {
+            day: 4,
+            date: "5/11 (一)",
+            title: "阿蘇火山壯遊",
+            transport: "自駕",
+            stay: "博多市區",
+            activities: [
+              { time: "上午", event: "由布院出發 -> 阿蘇火山 (車程約 2 hr)" },
+              { 
+                time: "景點", 
+                event: "阿蘇火山、草千里 (停留)",
+                dropdown: [
+                  { text: "⚠️ 不用預約，早上 09:30 前到現場排隊。SB方案(7分鐘)最推薦。" }
+                ]
+              },
+              { time: "移動", event: "返回博多市區 (車程約 2.5 hr)" },
+              { 
+                time: "注意", 
+                event: "還車提醒", 
+                dropdown: [
+                  { text: "⚠️ 滿油還車：記得保留加油收據給店員檢查" },
+                  { text: "3 Chome-2-2 Naka, Hakata Ward, Fukuoka", link: "https://maps.app.goo.gl/HznFy6St4aXYeQbs6" }
+                ]
+              }
+            ],
+            highlight: "阿蘇火山 / 草千里"
+          },
+          {
+            day: 5,
+            date: "5/12 (二)",
+            title: "市區休整",
+            transport: "自駕 / 大眾",
+            stay: "博多市區",
+            activities: [
+              { 
+                time: "全日", 
+                event: "自由活動"
+              },
+              { time: "備註", event: "彈性行程" }
+            ],
+            highlight: "自由行"
+          },
+          {
+            day: 6,
+            date: "5/13 (三)",
+            title: "分道揚鑣",
+            transport: "大眾交通",
+            stay: "博多市區",
+            activities: [
+              { time: "景點", event: "teamLab Forest Fukuoka", link: "https://maps.app.goo.gl/noTjgPwRwBfPms1MA" },
+              { time: "備註", event: "我先回家了 👋" }
+            ],
+            highlight: "詡歷返程"
+          },
+          {
+            day: 7,
+            date: "5/14 (四)",
+            title: "美食巡禮",
+            transport: "大眾交通",
+            stay: "博多市區",
+            activities: [
+              { time: "全日", event: "自由探索 / 美食巡禮" }
+            ],
+            highlight: "自由行"
+          },
+          {
+            day: 8,
+            date: "5/15 (五)",
+            title: "完美句點",
+            transport: "飛機",
+            stay: "溫暖的家",
+            activities: [
+              { time: "上午", event: "The Matcha Tokyo 51A", link: "https://maps.app.goo.gl/Wo893WuXVeji49py5" },
+              { time: "移動", event: "前往機場" },
+              { time: "起飛", event: "揮揮手！回家！" }
+            ],
+            highlight: "蔬琪、雅雅返程"
+          }
+        ];
+
+        // Initial Checklist Data
+        const initialChecklistData = [
+          { id: 1, text: "Visit Japan Web 入境表單", checked: false, category: "文件", link: "https://www.vjw.digital.go.jp/main/#/vjwplo001" },
+          { id: 2, text: "護照", checked: false, category: "文件" },
+          { id: 3, text: "國際駕照", checked: false, category: "駕照" },
+          { id: 4, text: "駕照日文譯本", checked: false, category: "駕照" },
+          { 
+            id: 13, 
+            text: "KLOOL租車", 
+            checked: false, 
+            category: "交通", 
+            link: "https://www.klook.com/zh-TW/wishlist/?spm=CarRental_Detail.TopNavigation.Wish&clickId=ab97499f04",
+            details: [
+                "🔸 推薦方案：TEP (ToCoo! Expressway Pass)",
+                "   - 優點：包含福岡/北九州都市高速，適合頻繁進出市區。",
+                "🔸 注意事項：",
+                "   - ETC卡領取：通常寄送至機場郵局或首晚飯店，預約時請確認。",
+                "   - 歸還：需使用回郵信封郵寄歸還。"
+            ]
+          },
+          { id: 12, text: "預約機場接送", checked: false, category: "交通" },
+          { id: 6, text: "購買 eSIM", checked: false, category: "網路/保險", link: "https://www.klook.com/zh-TW/wishlist/?spm=CarRental_Detail.TopNavigation.Wish&clickId=ab97499f04" },
+          { id: 7, text: "旅遊平安險證明", checked: false, category: "網路/保險" },
+          { id: 8, text: "下載 Charichari App", checked: false, category: "App" },
+          { id: 9, text: "預約 teamLab 門票", checked: false, category: "票券", link: "https://www.klook.com/zh-TW/wishlist/?spm=CarRental_Detail.TopNavigation.Wish&clickId=ab97499f04" },
+          { id: 11, text: "預約 Robata no Ito Okashi", checked: false, category: "餐廳", link: "https://www.tablecheck.com/zh-TW/robatano-itookashi/reserve/landing?utm_source=google" },
+        ];
+
+        const driveGuideData = [
+          {
+            title: "日本駕駛十條鐵律",
+            content: [
+              { title: "靠左行駛", desc: "謹記「左小彎、右大彎」，轉彎後不要開錯車道。" },
+              { title: "止まれ (Tomare)", desc: "看到倒三角標誌，輪胎務必「完全靜止」3秒，確認左右無車再開，警察抓極嚴！" },
+              { title: "禮讓行人", desc: "轉彎時若有人行道，無論有無紅綠燈，必須停車讓行人先過。" },
+              { title: "右轉待轉", desc: "綠燈右轉時，需駛入路口中央待轉區，務必禮讓「對向直行車」先行。" },
+              { title: "右轉箭頭", desc: "若號誌有右轉專用箭頭，需等綠色箭頭亮起才可右轉。" },
+              { title: "黃燈判斷", desc: "日本黃燈秒數短，看到黃燈請準備停車，切勿搶快。" },
+              { title: "平交道", desc: "通過前務必「完全停止」，開車窗聽聲音確認無火車。" },
+              { title: "方向燈/雨刷", desc: "日系右駕車通常右手打方向燈、左手雨刷 (部分歐系進口車除外)。" },
+              { title: "閃大燈禮儀", desc: "在日本，對向車閃大燈通常是「禮讓你先過」的意思，與台灣相反。" },
+              { title: "嚴禁違停", desc: "日本違規停車罰金極高，請務必尋找收費停車場 (P)。" }
+            ],
+            icon: <AlertOctagon className="w-5 h-5 text-[#E94D34]" />
+          }
+        ];
+
+        const getWeatherDesc = (code) => {
+          if (code === 0) return '晴朗';
+          if (code >= 1 && code <= 3) return '多雲';
+          if (code >= 45 && code <= 48) return '有霧';
+          if (code >= 51 && code <= 67) return '有雨';
+          if (code >= 71) return '有雪';
+          if (code >= 80 && code <= 99) return '雷雨';
+          return '晴朗';
+        };
+
+        const TabButton = ({ active, onClick, icon, label }) => (
+          <button 
+            onClick={onClick}
+            className={`flex flex-col items-center justify-center w-full py-2 transition-all duration-300 ${active ? 'translate-y-[-2px]' : 'opacity-60 hover:opacity-100'}`}
+          >
+            <div className={`${active ? 'text-[#E94D34]' : 'text-[#2B3445]'}`}>
+              {icon}
+            </div>
+            <span className={`text-[10px] mt-1 font-bold ${active ? 'text-[#E94D34]' : 'text-[#2B3445]'}`}>{label}</span>
+          </button>
+        );
+
+        const Card = ({ children, className = "" }) => (
+          <div className={`bg-white rounded-xl shadow-sm border border-[#E0CFC3] overflow-hidden ${className}`}>
+            {children}
+          </div>
+        );
+
+        const Badge = ({ children, variant = "navy" }) => {
+          const styles = {
+            navy: "bg-[#2B3445] text-[#E0CFC3] border-[#2B3445]",
+            vermilion: "bg-[#E94D34] text-white border-[#E94D34]",
+            beige: "bg-[#E0CFC3] text-[#2B3445] border-[#D0BFB3]",
+            outlineNavy: "bg-transparent text-[#2B3445] border-[#2B3445]",
+            outlineVermilion: "bg-transparent text-[#E94D34] border-[#E94D34]",
+          };
+          return (
+            <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${styles[variant] || styles.navy}`}>
+              {children}
+            </span>
+          );
+        };
+
+        const FlightInfoBlock = ({ flight, type }) => {
+          const isOutbound = type === 'outbound';
+          const iconColor = isOutbound ? 'text-[#2B3445]' : 'text-[#E94D34]';
+          
+          return (
+            <div className={`bg-white p-5 rounded-xl border border-[#E0CFC3] shadow-[0_2px_8px_rgba(43,52,69,0.08)]`}>
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center gap-2">
+                  <Plane className={`w-5 h-5 ${iconColor}`} />
+                  <h3 className="text-sm font-bold text-[#2B3445]">{flight.airline}</h3>
+                </div>
+                <div className="flex items-center gap-1.5 text-xs font-medium text-[#2B3445] bg-[#E0CFC3]/30 px-3 py-1 rounded-full">
+                  <Luggage className="w-3.5 h-3.5" />
+                  <span>{flight.baggage}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-[#2B3445]/70 mb-5 px-1 font-medium">
+                  <Calendar className={`w-4 h-4 ${iconColor}`} />
+                  <span>{flight.date}</span>
+              </div>
+              <div className="flex justify-between items-center px-1">
+                <div className="flex flex-col">
+                  <span className="text-3xl font-black text-[#2B3445] tracking-tight">{flight.departure.code}</span>
+                  <span className="text-xs text-[#2B3445]/60 font-bold mt-1">{flight.departure.city}</span>
+                  <span className="text-[10px] text-white bg-[#2B3445] px-1.5 py-0.5 rounded mt-1 w-fit">{flight.departure.terminal}</span>
+                </div>
+                <div className="flex flex-col items-center px-4 flex-1">
+                    <span className="text-xs font-bold text-[#2B3445] mb-1">{flight.departure.time}</span>
+                    <div className="w-full h-[2px] bg-[#E0CFC3] relative">
+                      <div className={`absolute right-0 -top-[3px] w-2 h-2 border-r-2 border-t-2 rotate-45 border-[#E0CFC3]`}></div>
+                    </div>
+                    <span className="text-xs font-bold text-[#2B3445] mt-1">{flight.arrival.time}</span>
+                    <span className="text-[10px] text-[#E0CFC3] mt-0.5 font-bold tracking-widest uppercase">Direct</span>
+                </div>
+                <div className="flex flex-col text-right items-end">
+                  <span className="text-3xl font-black text-[#2B3445] tracking-tight">{flight.arrival.code}</span>
+                  <span className="text-xs text-[#2B3445]/60 font-bold mt-1">{flight.arrival.city}</span>
+                  <span className="text-[10px] text-white bg-[#2B3445] px-1.5 py-0.5 rounded mt-1 w-fit">{flight.arrival.terminal}</span>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        // --- Main App Component ---
+        function App() {
+          const [activeTab, setActiveTab] = useState('flights');
+          const [checklist, setChecklist] = useState(initialChecklistData);
+          const [showVegCard, setShowVegCard] = useState(false);
+          const [flightView, setFlightView] = useState('me'); 
+          const [user, setUser] = useState(null);
+          const [expandedChecklistId, setExpandedChecklistId] = useState(null);
+          const [expandedItineraryId, setExpandedItineraryId] = useState(null);
+          const [expandedGuideIds, setExpandedGuideIds] = useState({});
+
+          const [weatherData, setWeatherData] = useState(null);
+          const [exchangeRate, setExchangeRate] = useState(null);
+          const [loading, setLoading] = useState(true);
+
+          useEffect(() => {
+            if (auth) {
+                const initAuth = async () => {
+                  try {
+                    await signInAnonymously(auth);
+                  } catch (error) {
+                    console.error("Auth failed:", error);
+                  }
+                };
+                initAuth();
+                const unsubscribeAuth = onAuthStateChanged(auth, setUser);
+                return () => unsubscribeAuth();
+            }
+          }, []);
+
+          useEffect(() => {
+            const fetchData = async () => {
+              setLoading(true);
+              let weatherInfo = { temp: 20, desc: "晴朗" }; 
+              let rateInfo = 0.21; 
+
+              try {
+                const weatherRes = await fetch('https://api.open-meteo.com/v1/forecast?latitude=33.5904&longitude=130.4017&current_weather=true&timezone=Asia%2FTokyo');
+                if (weatherRes.ok) {
+                    const weatherJson = await weatherRes.json();
+                    if (weatherJson.current_weather) {
+                        weatherInfo = {
+                            temp: Math.round(weatherJson.current_weather.temperature),
+                            desc: getWeatherDesc(weatherJson.current_weather.weathercode)
+                        };
+                    }
+                }
+              } catch (error) {
+                console.warn("Weather API fetch failed", error);
+              }
+
+              try {
+                const rateRes = await fetch('https://api.frankfurter.app/latest?from=JPY&to=TWD');
+                if (rateRes.ok) {
+                    const rateJson = await rateRes.json();
+                    if (rateJson?.rates?.TWD) {
+                        rateInfo = rateJson.rates.TWD;
+                    }
+                }
+              } catch (error) {
+                 console.warn("Exchange Rate API fetch failed", error);
+              }
+
+              setWeatherData(weatherInfo);
+              setExchangeRate(rateInfo);
+              setLoading(false);
+            };
+
+            fetchData();
+          }, []);
+
+          useEffect(() => {
+            if (!user || !db) return;
+            const checklistDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'lists', 'checklist_shared');
+
+            const unsubscribeSnapshot = onSnapshot(checklistDocRef, (docSnap) => {
+              if (docSnap.exists()) {
+                const data = docSnap.data();
+                if (data.items && Array.isArray(data.items)) {
+                  const mergedList = initialChecklistData.map(item => {
+                    const savedItem = data.items.find(s => s.id === item.id);
+                    return savedItem ? { ...item, checked: savedItem.checked } : item;
+                  });
+                  setChecklist(mergedList);
+                }
+              } else {
+                const initialSaveData = initialChecklistData.map(({ id, checked }) => ({ id, checked }));
+                setDoc(checklistDocRef, { items: initialSaveData }, { merge: true })
+                  .catch(err => console.error("Failed to init checklist doc", err));
+              }
+            }, (error) => {
+              console.error("Firestore snapshot error:", error);
+            });
+
+            return () => unsubscribeSnapshot();
+          }, [user]);
+
+          const toggleCheck = async (id) => {
+            const newChecklist = checklist.map(item => 
+              item.id === id ? { ...item, checked: !item.checked } : item
+            );
+            setChecklist(newChecklist);
+
+            if (!user || !db) return;
+            try {
+                const checklistDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'lists', 'checklist_shared');
+                const dataToSave = newChecklist.map(({ id, checked }) => ({ id, checked }));
+                await setDoc(checklistDocRef, { items: dataToSave }, { merge: true });
+            } catch (err) {
+                console.error("Failed to save checklist", err);
+            }
+          };
+
+          const toggleChecklistExpand = (id) => setExpandedChecklistId(expandedChecklistId === id ? null : id);
+          const toggleItineraryExpand = (id) => setExpandedItineraryId(expandedItineraryId === id ? null : id);
+          const toggleGuideExpand = (idx) => setExpandedGuideIds(prev => ({ ...prev, [idx]: !prev[idx] }));
+          
+          const calculateProgress = () => {
+            const done = checklist.filter(i => i.checked).length;
+            return Math.round((done / checklist.length) * 100);
+          };
+
+          const FlightsView = () => (
+            <div className="space-y-6 pb-24 px-4 pt-6">
+              <div className="flex p-1 bg-[#E0CFC3]/30 rounded-xl mb-6 shadow-inner border border-[#E0CFC3]">
+                <button 
+                  onClick={() => setFlightView('me')}
+                  className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${
+                    flightView === 'me' ? 'bg-[#2B3445] text-[#E0CFC3] shadow-md transform scale-[1.02]' : 'text-[#2B3445]/60 hover:text-[#2B3445]'
+                  }`}
+                >
+                  <User className="w-4 h-4" /> 詡歷
+                </button>
+                <button 
+                  onClick={() => setFlightView('others')}
+                  className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${
+                    flightView === 'others' ? 'bg-[#E94D34] text-white shadow-md transform scale-[1.02]' : 'text-[#2B3445]/60 hover:text-[#E94D34]'
+                  }`}
+                >
+                  <Users className="w-4 h-4" /> 蔬琪、雅雅
+                </button>
+              </div>
+
+              <div className="space-y-4 min-h-[300px]">
+                {flightView === 'me' ? (
+                  <div className="space-y-4">
+                     <div className="flex items-center gap-2 mb-2 ml-1">
+                        <span className="w-2 h-2 rounded-full bg-[#2B3445]"></span>
+                        <span className="text-xs font-bold text-[#2B3445] uppercase tracking-wider">去程 Outbound</span>
+                     </div>
+                     <FlightInfoBlock flight={flightData.outbound} type="outbound" />
+                     
+                     <div className="bg-[#E94D34]/10 border border-[#E94D34]/30 rounded-lg p-3 my-3">
+                        <div className="flex items-center gap-2 mb-2">
+                            <AlertTriangle className="w-4 h-4 text-[#E94D34]" />
+                            <span className="text-sm font-bold text-[#E94D34]">重要提醒</span>
+                        </div>
+                        <div className="space-y-2">
+                            <a href="https://www.vjw.digital.go.jp/main/#/vjwplo001" target="_blank" rel="noreferrer" className="flex items-center justify-between bg-white/50 p-2 rounded hover:bg-white transition-colors cursor-pointer group">
+                                <span className="text-xs font-medium text-[#2B3445] flex items-center gap-2">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-[#E94D34]"></span>
+                                    入境表單 (起飛前6hr)
+                                </span>
+                                <ExternalLink className="w-3 h-3 text-[#2B3445]/40 group-hover:text-[#E94D34]" />
+                            </a>
+                            <div className="flex items-center justify-between bg-white/50 p-2 rounded">
+                                <span className="text-xs font-medium text-[#2B3445] flex items-center gap-2">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-[#E94D34]"></span>
+                                    旅平險生效確認
+                                </span>
+                            </div>
+                        </div>
+                     </div>
+
+                     <div className="flex items-center gap-2 mb-2 mt-6 ml-1">
+                        <span className="w-2 h-2 rounded-full bg-[#E94D34]"></span>
+                        <span className="text-xs font-bold text-[#E94D34] uppercase tracking-wider">回程 Inbound</span>
+                     </div>
+                     <FlightInfoBlock flight={flightData.inbound.user} type="inbound" />
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                     <div className="flex items-center gap-2 mb-2 ml-1">
+                        <span className="w-2 h-2 rounded-full bg-[#2B3445]"></span>
+                        <span className="text-xs font-bold text-[#2B3445] uppercase tracking-wider">去程 Outbound</span>
+                     </div>
+                     <FlightInfoBlock flight={flightData.outbound} type="outbound" />
+                     
+                     <div className="flex items-center gap-2 mb-2 mt-6 ml-1">
+                        <span className="w-2 h-2 rounded-full bg-[#E94D34]"></span>
+                        <span className="text-xs font-bold text-[#E94D34] uppercase tracking-wider">回程 Inbound</span>
+                     </div>
+                     <FlightInfoBlock flight={flightData.inbound.others} type="inbound" />
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+
+          const ItineraryView = () => (
+            <div className="space-y-4 pb-24">
+              <div className="bg-[#2B3445] text-[#E0CFC3] p-6 rounded-b-[2rem] shadow-lg mb-6 border-b-4 border-[#E94D34]">
+                <h1 className="text-2xl font-bold mb-1">每日行程 🗓️</h1>
+                <p className="text-[#E0CFC3]/80 text-sm">福岡 • 由布院 • 阿蘇火山</p>
+              </div>
+              
+              <div className="px-4 space-y-4">
+                {itineraryData.map((day) => (
+                  <Card key={day.day} className="relative group">
+                    <div className={`absolute top-0 left-0 w-1.5 h-full ${day.highlight ? 'bg-[#E94D34]' : 'bg-[#2B3445]'}`}></div>
+                    <div className="p-4 pl-6">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-bold text-[#2B3445]/50 uppercase tracking-wider">Day {day.day}</span>
+                            <span className="text-xs font-bold text-[#2B3445]/70">{day.date}</span>
+                          </div>
+                          <h3 className="text-lg font-bold text-[#2B3445]">{day.title}</h3>
+                        </div>
+                        {day.transport.includes("CAR") || day.transport.includes("自駕") ? (
+                          <Car className="w-5 h-5 text-[#E94D34]" />
+                        ) : (
+                          <MapPin className="w-5 h-5 text-[#E0CFC3]" />
+                        )}
+                      </div>
+                      
+                      <div className="space-y-3 mt-3">
+                        {day.activities.map((act, idx) => {
+                          const itemId = `${day.day}-${idx}`;
+                          return (
+                            <div key={idx} className="flex flex-col">
+                              <div className="flex gap-3 text-sm items-start">
+                                <span className="text-[#2B3445]/50 min-w-[3rem] text-xs pt-0.5 font-mono">{act.time}</span>
+                                <div className="flex-1">
+                                  <span className="text-[#2B3445] font-medium flex items-center gap-2">
+                                    {act.link && !act.dropdown ? (
+                                      <a href={act.link} target="_blank" rel="noopener noreferrer" className="hover:text-[#E94D34] hover:underline flex items-center gap-1">
+                                        {act.event} <MapPin className="w-3 h-3 inline" />
+                                      </a>
+                                    ) : ( act.event )}
+                                    {act.dropdown && (
+                                      <button onClick={() => toggleItineraryExpand(itemId)} className="p-1 rounded-full bg-[#F5EFE9] text-[#2B3445] hover:bg-[#E0CFC3] transition-colors">
+                                        {expandedItineraryId === itemId ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                      </button>
+                                    )}
+                                  </span>
+                                  {act.dropdown && expandedItineraryId === itemId && (
+                                    <div className="mt-2 bg-[#F5EFE9] rounded-lg border border-[#E0CFC3] p-2">
+                                      {act.dropdown.map((dropItem, dropIdx) => (
+                                        <div key={dropIdx} className="py-1">
+                                          {dropItem.link ? (
+                                            <a href={dropItem.link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs font-bold text-[#E94D34] hover:underline">
+                                              <MapPin className="w-3 h-3" /> {dropItem.text}
+                                            </a>
+                                          ) : (
+                                            <p className="text-xs text-[#2B3445]/80 leading-relaxed pl-1 border-l-2 border-[#E94D34]">{dropItem.text}</p>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div className="mt-4 pt-3 border-t border-[#E0CFC3]/50 flex gap-2 overflow-x-auto no-scrollbar">
+                        <Badge variant="beige">{day.stay}</Badge>
+                        {day.highlight && <Badge variant="outlineVermilion">★ {day.highlight}</Badge>}
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          );
+
+          const NotesView = () => (
+            <div className="space-y-4 pb-24 px-4 pt-6">
+              <h2 className="text-xl font-bold text-[#2B3445] mb-4 flex items-center gap-2">
+                <Info className="w-5 h-5 text-[#E94D34]" /> 注意事項 & 工具
+              </h2>
+              
+              <Card className="bg-[#F5EFE9] border-[#E0CFC3] cursor-pointer mb-6 hover:border-[#E94D34] transition-colors">
+                <div className="p-5" onClick={() => setShowVegCard(true)}>
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 bg-[#E0CFC3] rounded-full text-[#2B3445]">
+                      <Utensils className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-[#2B3445]">飲食溝通卡</h3>
+                      <p className="text-xs text-[#2B3445]/60">點擊放大顯示給店員</p>
+                    </div>
+                  </div>
+                  <p className="text-sm text-[#2B3445]/80 bg-white p-3 rounded border border-[#E0CFC3] italic">
+                    "不好意思，有蔥、洋蔥還有大蒜嗎..."
+                  </p>
+                </div>
+              </Card>
+
+              <div className="grid gap-3 mt-4">
+                {driveGuideData.map((guide, idx) => {
+                   const isToggleable = Array.isArray(guide.content); 
+                   const isExpanded = expandedGuideIds[idx] !== undefined ? expandedGuideIds[idx] : !isToggleable; 
+                   return (
+                  <Card key={idx}>
+                    <div className="p-4">
+                      <div className="flex items-center justify-between mb-2 cursor-pointer" onClick={() => isToggleable && toggleGuideExpand(idx)}>
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-[#E0CFC3]/30 rounded-full">{guide.icon}</div>
+                          <h3 className="font-bold text-[#2B3445]">{guide.title}</h3>
+                        </div>
+                        {isToggleable && (
+                          <div className="text-[#2B3445]/60">
+                            {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                          </div>
+                        )}
+                      </div>
+                      
+                      {isExpanded && (
+                      <div className="pl-[3.25rem]">
+                        {Array.isArray(guide.content) ? (
+                          <div className="space-y-4 mt-2">
+                            {guide.content.map((item, i) => (
+                              <div key={i} className="relative">
+                                <div className="flex items-baseline gap-1.5">
+                                    <span className="text-[#E94D34] font-black text-sm">{i + 1}.</span>
+                                    <span className="font-bold text-[#2B3445] text-sm">{item.title}</span>
+                                </div>
+                                <p className="text-xs text-[#2B3445]/70 mt-1 pl-4 leading-relaxed">{item.desc}</p>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-[#2B3445]/70 leading-relaxed">{guide.content}</p>
+                        )}
+                      </div>
+                      )}
+                    </div>
+                  </Card>
+                )})}
+              </div>
+            </div>
+          );
+
+          const ChecklistView = () => (
+            <div className="space-y-4 pb-24 px-4 pt-6">
+              <div className="flex justify-between items-end mb-4">
+                <h2 className="text-xl font-bold text-[#2B3445] flex items-center gap-2">
+                    <CheckSquare className="w-5 h-5 text-[#E94D34]" /> 待辦事項
+                </h2>
+                <span className="text-sm font-bold text-[#E94D34]">{calculateProgress()}% 完成</span>
+              </div>
+
+              <div className="w-full bg-[#E0CFC3] rounded-full h-2.5 mb-6">
+                <div className="bg-[#2B3445] h-2.5 rounded-full transition-all duration-500" style={{ width: `${calculateProgress()}%` }}></div>
+              </div>
+
+              <div className="space-y-2">
+                {checklist.map((item) => (
+                  <div key={item.id} onClick={() => toggleCheck(item.id)}
+                    className={`flex flex-col p-4 rounded-xl border transition-all cursor-pointer select-none ${
+                      item.checked ? 'bg-[#E0CFC3]/30 border-transparent' : 'bg-white border-[#E0CFC3] hover:border-[#2B3445]'
+                    }`}
+                  >
+                    <div className="flex items-center w-full">
+                      <div className={`flex-shrink-0 w-5 h-5 rounded border flex items-center justify-center mr-3 transition-colors ${
+                        item.checked ? 'bg-[#2B3445] border-[#2B3445]' : 'border-[#E0CFC3]'
+                      }`}>
+                        {item.checked && <CheckSquare className="w-3.5 h-3.5 text-[#E0CFC3]" />}
+                      </div>
+                      <div className="flex-1">
+                        <p className={`text-sm font-bold ${item.checked ? 'text-[#2B3445]/40 line-through' : 'text-[#2B3445]'}`}>{item.text}</p>
+                      </div>
+                      {item.details && (
+                        <button onClick={(e) => { e.stopPropagation(); toggleChecklistExpand(item.id); }} className="p-1 ml-2 text-[#2B3445]/60 hover:text-[#E94D34] transition-colors">
+                          {expandedChecklistId === item.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between mt-1 pl-8">
+                      <span className="text-[10px] text-[#2B3445]/60 bg-[#E0CFC3]/30 px-1.5 py-0.5 rounded inline-block">{item.category}</span>
+                      {item.link && (
+                          <a href={item.link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="flex items-center gap-1 text-[10px] font-bold text-[#E94D34] bg-[#F5EFE9] px-2 py-1 rounded-full hover:bg-[#E0CFC3]/50 transition-colors">
+                              🔗 開啟連結
+                          </a>
+                      )}
+                    </div>
+
+                    {expandedChecklistId === item.id && item.details && (
+                        <div className="mt-3 pl-8 text-xs text-[#2B3445]/80 bg-[#F5EFE9] p-3 rounded-lg border border-[#E0CFC3]">
+                            {item.details.map((detail, idx) => (
+                                <p key={idx} className="mb-1 leading-relaxed">{detail}</p>
+                            ))}
+                        </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+
+          return (
+            <div className="bg-[#E0CFC3] min-h-screen font-sans max-w-md mx-auto relative shadow-2xl overflow-hidden">
+              <div className="h-full overflow-y-auto pb-20 no-scrollbar">
+                {activeTab === 'flights' && (
+                    <div className="bg-[#2B3445] pt-6 pb-12 px-6 rounded-b-[2.5rem] mb-[-2rem] relative z-0">
+                        <div className="grid grid-cols-2 gap-4 mb-2">
+                            <div className="bg-[#E0CFC3]/10 border border-[#E0CFC3]/20 rounded-2xl p-3 flex flex-col items-center justify-center backdrop-blur-sm">
+                                <div className="flex items-center gap-1.5 mb-1">
+                                    <CloudSun className="w-5 h-5 text-[#E94D34]" />
+                                    <span className="text-[#E0CFC3] text-xs font-bold">福岡天氣</span>
+                                </div>
+                                {loading ? (
+                                  <RefreshCw className="w-6 h-6 text-[#E0CFC3] animate-spin my-1" />
+                                ) : (
+                                  <>
+                                    <div className="text-2xl font-black text-white">{weatherData?.temp ?? '--'}°<span className="text-sm font-normal text-[#E0CFC3]/80">C</span></div>
+                                    <span className="text-[10px] text-[#E0CFC3]/60 mt-0.5">{weatherData?.desc ?? '載入中'}</span>
+                                  </>
+                                )}
+                            </div>
+
+                            <div className="bg-[#E0CFC3]/10 border border-[#E0CFC3]/20 rounded-2xl p-3 flex flex-col items-center justify-center backdrop-blur-sm">
+                                <div className="flex items-center gap-1.5 mb-1">
+                                    <Coins className="w-4 h-4 text-[#E94D34]" />
+                                    <span className="text-[#E0CFC3] text-xs font-bold">即時匯率</span>
+                                </div>
+                                {loading ? (
+                                  <RefreshCw className="w-6 h-6 text-[#E0CFC3] animate-spin my-1" />
+                                ) : (
+                                  <>
+                                    <div className="text-2xl font-black text-white">{exchangeRate ? exchangeRate.toFixed(3) : '--'}</div>
+                                    <span className="text-[10px] text-[#E0CFC3]/60 mt-0.5">JPY / TWD</span>
+                                  </>
+                                )}
+                            </div>
+                        </div>
+                        <p className="text-center text-[#E0CFC3]/40 text-[10px] mt-2 flex items-center justify-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            <span>數據更新中...</span>
+                        </p>
+                    </div>
+                )}
+                
+                <div className="relative z-10">
+                    {activeTab === 'flights' && <FlightsView />}
+                    {activeTab === 'itinerary' && <ItineraryView />}
+                    {activeTab === 'notes' && <NotesView />}
+                    {activeTab === 'checklist' && <ChecklistView />}
+                </div>
+              </div>
+
+              <div className="fixed bottom-0 w-full max-w-md bg-white/95 backdrop-blur-md border-t border-[#E0CFC3] pb-6 pt-2 px-4 flex justify-between z-40 shadow-[0_-4px_10px_rgba(43,52,69,0.05)]">
+                <TabButton active={activeTab === 'flights'} onClick={() => setActiveTab('flights')} icon={<Plane className="w-6 h-6" />} label="航班" />
+                <TabButton active={activeTab === 'itinerary'} onClick={() => setActiveTab('itinerary')} icon={<Calendar className="w-6 h-6" />} label="行程" />
+                <TabButton active={activeTab === 'notes'} onClick={() => setActiveTab('notes')} icon={<FileText className="w-6 h-6" />} label="提醒" />
+                <TabButton active={activeTab === 'checklist'} onClick={() => setActiveTab('checklist')} icon={<CheckSquare className="w-6 h-6" />} label="待辦" />
+              </div>
+
+              {showVegCard && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#2B3445]/90 p-6 backdrop-blur-sm" onClick={() => setShowVegCard(false)}>
+                  <div className="bg-white p-6 rounded-2xl w-full max-w-sm shadow-2xl transform transition-all scale-100 border-4 border-[#E94D34]" onClick={e => e.stopPropagation()}>
+                    <div className="flex justify-between items-center mb-6 border-b border-[#E0CFC3] pb-4">
+                      <h3 className="text-xl font-bold text-[#2B3445]">飲食需求卡</h3>
+                      <button onClick={() => setShowVegCard(false)} className="p-2 bg-[#E0CFC3]/30 rounded-full hover:bg-[#E0CFC3]">
+                        <X className="w-5 h-5 text-[#2B3445]" />
+                      </button>
+                    </div>
+                    
+                    <div className="space-y-6">
+                      <div className="p-4 bg-[#F5EFE9] rounded-xl border-l-4 border-[#E94D34]">
+                        <p className="text-xs text-[#2B3445]/50 mb-1 uppercase tracking-wider font-bold">Japanese</p>
+                        <p className="text-lg font-bold text-[#2B3445] leading-relaxed">
+                          すみません、<br/>ネギや玉ねぎ、にんにくなど<br/>入っていますか。<br/>それも食べられませんので、<br/>入っていれば、抜いていただけませんか。
+                        </p>
+                      </div>
+                      
+                      <div className="p-4 bg-white rounded-xl border border-[#E0CFC3] border-l-4 border-l-[#2B3445]">
+                        <p className="text-xs text-[#2B3445]/50 mb-1 uppercase tracking-wider font-bold">Chinese (Traditional)</p>
+                        <p className="text-base text-[#2B3445]">
+                          不好意思，請問有加蔥、洋蔥或大蒜嗎？<br/>這些我也沒辦法吃。<br/>如果有的話，可以幫我拿掉嗎？
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-center text-xs text-[#2B3445]/40 mt-6">請出示此畫面給餐廳服務人員確認</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        }
+
+        // Render App
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
