@@ -1,871 +1,1691 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#2B3445">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>九州旅遊行程</title>
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <script type="importmap">
-      {
-        "imports": {
-          "react": "https://esm.sh/react@18.2.0",
-          "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-          "lucide-react": "https://esm.sh/lucide-react@0.292.0",
-          "firebase/app": "https://esm.sh/firebase@10.7.1/app",
-          "firebase/auth": "https://esm.sh/firebase@10.7.1/auth",
-          "firebase/firestore": "https://esm.sh/firebase@10.7.1/firestore"
-        }
-      }
-    </script>
-    
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>九州之旅 2026</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --cream: #F5F2EA;
+      --cream-dark: #EDE9DC;
+      --olive: #4A5C2F;
+      --lime: #BFCF3E;
+      --lime-light: #D4E05A;
+      --sand: #C8BA9A;
+      --white: #FFFFFF;
+      --text-primary: #1A1A1A;
+      --text-secondary: #6B6B5A;
+      --radius-card: 16px;
+      --radius-pill: 999px;
+      --shadow-card: 0 4px 20px rgba(0,0,0,0.08);
+      --red: #E94D34;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--cream);
+      font-family: 'Inter', 'Helvetica Neue', sans-serif;
+      color: var(--text-primary);
+      max-width: 430px;
+      margin: 0 auto;
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
 
-    <style>
-        /* Hide scrollbar for Chrome, Safari and Opera */
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        /* Hide scrollbar for IE, Edge and Firefox */
-        .no-scrollbar {
-            -ms-overflow-style: none;  /* IE and Edge */
-            scrollbar-width: none;  /* Firefox */
-        }
-        /* Safe area support for mobile devices */
-        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
-    </style>
+    /* ── Scroll Reveal ── */
+    .section { opacity: 0; transform: translateY(24px); transition: opacity 0.5s ease, transform 0.5s ease; }
+    .section.visible { opacity: 1; transform: translateY(0); }
+
+    /* ── Sticky Nav ── */
+    .top-nav {
+      position: fixed; top: 0; left: 50%; transform: translateX(-50%);
+      width: 100%; max-width: 430px;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 14px 20px;
+      z-index: 100;
+      transition: background 0.3s ease, backdrop-filter 0.3s ease;
+    }
+    .top-nav.scrolled {
+      background: rgba(245,242,234,0.88);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--sand);
+    }
+    .nav-pill {
+      background: rgba(20,20,20,0.55);
+      backdrop-filter: blur(8px);
+      border-radius: var(--radius-pill);
+      padding: 8px 14px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .nav-pill button {
+      background: none; border: none; color: #fff;
+      font-size: 16px; cursor: pointer; line-height: 1;
+    }
+    .nav-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 14px; color: #fff; font-weight: 600;
+      opacity: 0; transition: opacity 0.3s;
+    }
+    .top-nav.scrolled .nav-title { opacity: 1; }
+
+    /* ── Hero ── */
+    .hero {
+      position: relative; height: 70vh; min-height: 420px;
+      overflow: hidden; margin-bottom: 0;
+    }
+    .hero-img {
+      width: 100%; height: 100%; object-fit: cover;
+      transform: scale(1.05); transition: transform 6s ease;
+    }
+    .hero-img.loaded { transform: scale(1); }
+    .hero-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(to bottom, transparent 35%, rgba(10,12,8,0.82));
+    }
+    .hero-content {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      padding: 28px 24px 36px;
+    }
+    .hero-tag {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--lime); color: var(--olive);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 11px; font-weight: 700;
+      padding: 5px 12px; border-radius: var(--radius-pill);
+      letter-spacing: 0.08em; text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .hero h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 42px; font-weight: 700; color: #fff;
+      line-height: 1.1; margin-bottom: 8px;
+    }
+    .hero-sub {
+      color: rgba(255,255,255,0.75);
+      font-size: 14px; font-weight: 500;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .hero-sub span { opacity: 0.5; }
+
+    /* ── Live Info Bar ── */
+    .live-bar {
+      display: flex; gap: 0;
+      background: var(--olive);
+      border-radius: 0;
+      overflow: hidden;
+      margin-bottom: 0;
+    }
+    .live-item {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 14px 8px;
+      border-right: 1px solid rgba(255,255,255,0.1);
+    }
+    .live-item:last-child { border-right: none; }
+    .live-label {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 9px; font-weight: 700;
+      color: rgba(255,255,255,0.5);
+      letter-spacing: 0.1em; text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .live-val {
+      font-size: 18px; font-weight: 700; color: var(--lime);
+      line-height: 1;
+    }
+    .live-sub { font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 2px; }
+    .live-spin { animation: spin 1.2s linear infinite; display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Overview Strip ── */
+    .overview {
+      padding: 20px 0 16px;
+      background: var(--cream-dark);
+      border-bottom: 1px solid var(--sand);
+    }
+    .overview-scroll {
+      display: flex; gap: 10px;
+      overflow-x: auto; padding: 0 20px;
+      scrollbar-width: none;
+    }
+    .overview-scroll::-webkit-scrollbar { display: none; }
+    .overview-pill {
+      flex-shrink: 0;
+      display: flex; align-items: center; gap: 7px;
+      background: var(--white);
+      border: 1px solid var(--sand);
+      border-radius: var(--radius-pill);
+      padding: 8px 14px;
+      font-size: 12px; font-weight: 600;
+      color: var(--olive);
+      white-space: nowrap;
+    }
+    .overview-pill .icon { font-size: 14px; }
+
+    /* ── Bottom Navigation Tabs ── */
+    .tab-bar {
+      position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+      width: 100%; max-width: 430px;
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(14px);
+      border-top: 1px solid var(--sand);
+      display: flex;
+      z-index: 90;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .tab-btn {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 3px; padding: 10px 4px;
+      background: none; border: none; cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 10px; font-weight: 700;
+      color: var(--text-secondary);
+      transition: color 0.2s;
+    }
+    .tab-btn.active { color: var(--olive); }
+    .tab-btn .tab-icon { font-size: 20px; line-height: 1; }
+    .tab-btn.active .tab-icon { filter: none; }
+
+    /* ── Page Panels ── */
+    .panel { display: none; padding: 20px 20px 100px; }
+    .panel.active { display: block; }
+
+    /* ── Section Header ── */
+    .sec-header {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 16px;
+    }
+    .sec-header h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px; font-weight: 700; color: var(--olive);
+    }
+    .sec-header .badge {
+      background: var(--lime); color: var(--olive);
+      font-size: 11px; font-weight: 700;
+      padding: 3px 10px; border-radius: var(--radius-pill);
+    }
+
+    /* ── Flight Cards ── */
+    .flight-toggle {
+      display: flex; background: var(--cream-dark);
+      border-radius: var(--radius-pill);
+      padding: 4px; margin-bottom: 20px;
+    }
+    .flight-toggle button {
+      flex: 1; padding: 10px; border: none; cursor: pointer;
+      border-radius: var(--radius-pill);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px; font-weight: 700;
+      color: var(--text-secondary);
+      background: none; transition: all 0.25s;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .flight-toggle button.active {
+      background: var(--olive); color: #fff;
+      box-shadow: 0 2px 8px rgba(74,92,47,0.25);
+    }
+
+    .flight-card {
+      background: var(--white);
+      border-radius: var(--radius-card);
+      box-shadow: var(--shadow-card);
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    .flight-header {
+      background: var(--olive);
+      padding: 12px 16px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .flight-header .airline {
+      font-size: 13px; font-weight: 700; color: var(--lime);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .flight-header .direction {
+      font-size: 11px; color: rgba(255,255,255,0.6);
+      font-family: 'DM Sans', sans-serif;
+      letter-spacing: 0.1em; text-transform: uppercase;
+    }
+    .flight-body { padding: 20px 16px; }
+    .flight-route {
+      display: flex; align-items: center; gap: 0;
+      margin-bottom: 16px;
+    }
+    .airport-block { text-align: center; }
+    .airport-code {
+      font-size: 32px; font-weight: 700; color: var(--olive);
+      font-family: 'Playfair Display', serif;
+      line-height: 1;
+    }
+    .airport-city { font-size: 11px; color: var(--text-secondary); margin-top: 4px; }
+    .airport-terminal {
+      font-size: 9px; font-weight: 700;
+      background: var(--olive); color: var(--lime);
+      padding: 2px 7px; border-radius: var(--radius-pill);
+      margin-top: 5px; display: inline-block;
+      letter-spacing: 0.05em;
+    }
+    .flight-middle {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; padding: 0 12px;
+    }
+    .flight-times {
+      display: flex; justify-content: space-between;
+      width: 100%; margin-bottom: 6px;
+    }
+    .flight-time { font-size: 13px; font-weight: 700; color: var(--olive); }
+    .flight-line {
+      width: 100%; height: 2px; background: var(--sand);
+      position: relative; margin: 4px 0;
+    }
+    .flight-line::after {
+      content: '✈'; position: absolute; top: 50%; right: 0;
+      transform: translateY(-50%);
+      font-size: 14px; color: var(--olive);
+      line-height: 1;
+    }
+    .flight-direct {
+      font-size: 9px; font-weight: 700;
+      color: var(--sand); letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+    .flight-meta {
+      display: flex; gap: 8px; flex-wrap: wrap;
+      padding-top: 12px; border-top: 1px dashed var(--cream-dark);
+    }
+    .flight-meta-pill {
+      display: flex; align-items: center; gap: 5px;
+      background: var(--cream-dark); border-radius: var(--radius-pill);
+      padding: 5px 10px; font-size: 11px; font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    .alert-card {
+      background: rgba(233,77,52,0.08);
+      border: 1px solid rgba(233,77,52,0.25);
+      border-radius: var(--radius-card);
+      padding: 14px 16px;
+      margin-top: 4px;
+    }
+    .alert-title {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px; font-weight: 700; color: var(--red);
+      margin-bottom: 10px;
+    }
+    .alert-link {
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--white); padding: 10px 12px;
+      border-radius: 10px; text-decoration: none;
+      font-size: 12px; font-weight: 600; color: var(--text-primary);
+      transition: background 0.2s;
+    }
+    .alert-link:hover { background: var(--cream-dark); }
+
+    /* ── Itinerary ── */
+    .day-card {
+      background: var(--white);
+      border-radius: var(--radius-card);
+      box-shadow: var(--shadow-card);
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+    .day-card-img {
+      width: 100%; height: 160px; object-fit: cover;
+    }
+    .day-header {
+      display: flex; align-items: flex-start;
+      gap: 14px; padding: 16px 16px 0;
+      cursor: pointer;
+    }
+    .day-badge {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: var(--olive); color: var(--lime);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 700; flex-shrink: 0;
+    }
+    .day-info { flex: 1; }
+    .day-meta {
+      font-size: 11px; color: var(--text-secondary);
+      font-family: 'DM Sans', sans-serif;
+      margin-bottom: 4px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .day-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 18px; font-weight: 700; color: var(--text-primary);
+    }
+    .day-tags {
+      display: flex; flex-wrap: wrap; gap: 6px;
+      padding: 10px 16px 0;
+    }
+    .tag {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: var(--cream-dark); color: var(--text-secondary);
+      font-size: 10px; font-weight: 700;
+      padding: 4px 10px; border-radius: var(--radius-pill);
+      font-family: 'DM Sans', sans-serif;
+    }
+    .tag.highlight {
+      background: rgba(233,77,52,0.1);
+      color: var(--red);
+      border: 1px solid rgba(233,77,52,0.2);
+    }
+    .tag.transport {
+      background: rgba(74,92,47,0.1);
+      color: var(--olive);
+    }
+    .day-timeline {
+      padding: 16px;
+      display: none;
+    }
+    .day-timeline.open { display: block; }
+    .timeline-item {
+      display: flex; gap: 14px; position: relative;
+      padding-bottom: 16px;
+    }
+    .timeline-item:last-child { padding-bottom: 0; }
+    .timeline-item:not(:last-child)::before {
+      content: '';
+      position: absolute; left: 17px; top: 24px; bottom: 0;
+      width: 2px; background: var(--cream-dark);
+    }
+    .timeline-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--sand); flex-shrink: 0;
+      margin-top: 6px; margin-left: 13px;
+      position: relative; z-index: 1;
+    }
+    .timeline-dot.key { background: var(--olive); }
+    .timeline-time {
+      width: 44px; flex-shrink: 0;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 10px; font-weight: 700;
+      color: var(--text-secondary);
+      padding-top: 2px; text-align: right;
+    }
+    .timeline-content { flex: 1; }
+    .timeline-event {
+      font-size: 13px; font-weight: 600; color: var(--text-primary);
+      line-height: 1.4;
+    }
+    .timeline-link {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 11px; font-weight: 700; color: var(--red);
+      text-decoration: none; margin-top: 5px;
+      background: rgba(233,77,52,0.08);
+      padding: 4px 10px; border-radius: var(--radius-pill);
+    }
+    .timeline-dropdown { margin-top: 8px; }
+    .timeline-dropdown-item {
+      font-size: 11px; color: var(--text-secondary);
+      padding: 5px 10px;
+      border-left: 3px solid var(--lime);
+      background: var(--cream-dark);
+      border-radius: 0 8px 8px 0;
+      margin-bottom: 4px;
+      line-height: 1.5;
+    }
+    .timeline-dropdown-link {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 11px; font-weight: 700; color: var(--red);
+      text-decoration: none; padding: 6px 10px;
+      border-left: 3px solid var(--red);
+      background: rgba(233,77,52,0.06);
+      border-radius: 0 8px 8px 0; margin-bottom: 4px;
+    }
+    .expand-btn {
+      display: flex; align-items: center; gap: 6px;
+      width: 100%; padding: 12px 16px;
+      background: none; border: none; border-top: 1px solid var(--cream-dark);
+      font-size: 12px; font-weight: 700; color: var(--olive);
+      cursor: pointer; font-family: 'DM Sans', sans-serif;
+      transition: background 0.2s;
+    }
+    .expand-btn:hover { background: var(--cream); }
+    .expand-icon { margin-left: auto; transition: transform 0.3s; }
+    .day-card.open .expand-icon { transform: rotate(180deg); }
+
+    /* ── Flight section in itinerary ── */
+    .transport-card {
+      background: var(--white);
+      border-radius: var(--radius-card);
+      box-shadow: var(--shadow-card);
+      overflow: hidden; margin-bottom: 20px;
+    }
+    .transport-header {
+      display: flex; align-items: stretch; min-height: 80px;
+    }
+    .transport-sidebar {
+      width: 36px; background: var(--olive);
+      display: flex; align-items: center; justify-content: center;
+      writing-mode: vertical-rl; text-orientation: mixed;
+      transform: rotate(180deg);
+      font-size: 9px; font-weight: 700; letter-spacing: 0.12em;
+      color: var(--lime); text-transform: uppercase;
+      flex-shrink: 0;
+    }
+    .transport-body { flex: 1; padding: 16px; }
+    .transport-route {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+    }
+    .t-code { font-size: 22px; font-weight: 700; color: var(--olive); }
+    .t-arrow {
+      flex: 1; display: flex; align-items: center;
+      gap: 4px; color: var(--sand); font-size: 18px;
+    }
+    .t-arrow-line {
+      flex: 1; height: 1px; border-top: 2px dashed var(--sand);
+    }
+    .transport-details { display: flex; flex-wrap: wrap; gap: 6px; }
+    .t-chip {
+      background: var(--cream-dark); border-radius: var(--radius-pill);
+      padding: 4px 10px; font-size: 11px; font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    /* ── Checklist ── */
+    .progress-bar-wrap {
+      background: var(--cream-dark); border-radius: var(--radius-pill);
+      height: 10px; overflow: hidden; margin-bottom: 20px;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .progress-bar {
+      height: 100%; background: var(--olive);
+      border-radius: var(--radius-pill);
+      transition: width 0.7s ease;
+    }
+    .progress-label {
+      display: flex; justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 12px; font-weight: 700; color: var(--text-secondary);
+    }
+    .progress-pct {
+      background: var(--lime); color: var(--olive);
+      padding: 2px 10px; border-radius: var(--radius-pill);
+      font-size: 12px; font-weight: 700;
+    }
+    .check-item {
+      display: flex; align-items: flex-start; gap: 14px;
+      background: var(--white);
+      border-radius: var(--radius-card);
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      border: 1.5px solid var(--cream-dark);
+      cursor: pointer;
+      transition: border-color 0.2s, opacity 0.2s;
+      box-shadow: var(--shadow-card);
+    }
+    .check-item.done {
+      opacity: 0.5; border-color: transparent;
+      background: var(--cream-dark);
+    }
+    .check-box {
+      width: 22px; height: 22px; border-radius: 7px;
+      border: 2px solid var(--sand);
+      flex-shrink: 0; display: flex; align-items: center;
+      justify-content: center; transition: all 0.2s;
+      margin-top: 1px;
+    }
+    .check-box.checked { background: var(--olive); border-color: var(--olive); }
+    .check-box.checked::after { content: '✓'; color: var(--lime); font-size: 13px; font-weight: 700; }
+    .check-text { font-size: 14px; font-weight: 600; }
+    .check-item.done .check-text { text-decoration: line-through; color: var(--text-secondary); }
+    .check-cat {
+      font-size: 10px; font-weight: 700; font-family: 'DM Sans', sans-serif;
+      background: var(--cream-dark); padding: 2px 8px;
+      border-radius: var(--radius-pill); color: var(--text-secondary);
+      margin-top: 5px; display: inline-block; letter-spacing: 0.06em;
+    }
+    .check-link {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: var(--red); color: #fff;
+      font-size: 10px; font-weight: 700; font-family: 'DM Sans', sans-serif;
+      padding: 3px 10px; border-radius: var(--radius-pill);
+      text-decoration: none; margin-top: 6px;
+    }
+    .check-details {
+      display: none; margin-top: 10px; padding-top: 10px;
+      border-top: 1px dashed var(--cream-dark);
+      font-size: 12px; color: var(--text-secondary); line-height: 1.6;
+    }
+    .check-details.open { display: block; }
+    .check-expand {
+      background: none; border: none; cursor: pointer;
+      color: var(--text-secondary); font-size: 16px;
+      line-height: 1; padding: 2px; margin-left: auto; flex-shrink: 0;
+      transition: transform 0.2s;
+    }
+
+    /* ── Tips / Notes ── */
+    .veg-card {
+      background: var(--white);
+      border-radius: var(--radius-card);
+      box-shadow: var(--shadow-card);
+      border-left: 5px solid var(--red);
+      padding: 20px; margin-bottom: 16px;
+      cursor: pointer; transition: transform 0.2s;
+    }
+    .veg-card:hover { transform: translateY(-2px); }
+    .veg-card h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 18px; margin-bottom: 8px; color: var(--text-primary);
+    }
+    .veg-card p {
+      font-size: 12px; color: var(--text-secondary); font-style: italic;
+    }
+    .veg-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: var(--cream-dark); border-radius: var(--radius-pill);
+      padding: 4px 10px; font-size: 10px; font-weight: 700;
+      color: var(--text-secondary); margin-bottom: 10px;
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    .guide-card {
+      background: var(--olive);
+      border-radius: var(--radius-card);
+      overflow: hidden; margin-bottom: 16px;
+    }
+    .guide-header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 18px 20px;
+      cursor: pointer;
+    }
+    .guide-icon { font-size: 22px; }
+    .guide-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 18px; font-weight: 700; color: var(--lime);
+    }
+    .guide-toggle { margin-left: auto; color: var(--lime); font-size: 18px; transition: transform 0.3s; }
+    .guide-card.open .guide-toggle { transform: rotate(180deg); }
+    .guide-body {
+      display: none; padding: 0 20px 20px;
+    }
+    .guide-card.open .guide-body { display: block; }
+    .guide-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+    }
+    .guide-item {
+      background: rgba(255,255,255,0.08);
+      border-radius: 12px; padding: 12px;
+    }
+    .guide-num {
+      font-size: 10px; font-weight: 700; color: var(--lime);
+      font-family: 'DM Sans', sans-serif; margin-bottom: 4px;
+    }
+    .guide-item-title {
+      font-size: 13px; font-weight: 700; color: #fff;
+      margin-bottom: 4px;
+    }
+    .guide-desc {
+      font-size: 11px; color: rgba(255,255,255,0.6);
+      line-height: 1.5;
+    }
+
+    /* ── Modal ── */
+    .modal-backdrop {
+      position: fixed; inset: 0; z-index: 200;
+      background: rgba(10,12,8,0.75);
+      backdrop-filter: blur(8px);
+      display: flex; align-items: center; justify-content: center;
+      padding: 24px;
+      display: none;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: var(--white);
+      border-radius: 20px; width: 100%; max-width: 380px;
+      overflow: hidden; box-shadow: 0 24px 60px rgba(0,0,0,0.25);
+    }
+    .modal-header {
+      background: var(--olive); padding: 18px 20px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .modal-header h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 20px; color: var(--lime);
+    }
+    .modal-close {
+      background: rgba(255,255,255,0.15); border: none;
+      border-radius: 50%; width: 32px; height: 32px;
+      color: #fff; cursor: pointer; font-size: 16px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .modal-body { padding: 20px; }
+    .veg-block { border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+    .veg-block.jp { background: var(--cream-dark); border-left: 4px solid var(--red); }
+    .veg-block.zh { background: var(--cream); border-left: 4px solid var(--olive); }
+    .veg-lang {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--text-secondary);
+      margin-bottom: 10px; font-family: 'DM Sans', sans-serif;
+    }
+    .veg-text-jp { font-size: 18px; font-weight: 700; color: var(--text-primary); line-height: 1.7; }
+    .veg-text-zh { font-size: 14px; color: var(--text-secondary); line-height: 1.8; }
+
+    /* scrollbar-none helper */
+    .no-scroll { overflow-x: auto; scrollbar-width: none; }
+    .no-scroll::-webkit-scrollbar { display: none; }
+
+    /* ── Accommodation Section ── */
+    .hotel-card {
+      background: var(--white);
+      border-radius: var(--radius-card);
+      box-shadow: var(--shadow-card);
+      overflow: hidden; margin-bottom: 16px;
+    }
+    .hotel-img { width: 100%; height: 160px; object-fit: cover; }
+    .hotel-body { padding: 16px; }
+    .hotel-name {
+      font-family: 'Playfair Display', serif;
+      font-size: 18px; font-weight: 700; margin-bottom: 8px;
+    }
+    .hotel-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+    .hotel-pill {
+      background: var(--cream-dark); border-radius: var(--radius-pill);
+      padding: 4px 10px; font-size: 11px; font-weight: 500;
+      color: var(--text-secondary);
+    }
+    .hotel-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px; background: var(--cream);
+      border-top: 1px solid var(--cream-dark);
+    }
+    .hotel-dates { font-size: 12px; color: var(--text-secondary); font-weight: 600; }
+    .hotel-badge {
+      background: var(--olive); color: var(--lime);
+      font-size: 11px; font-weight: 700; padding: 5px 14px;
+      border-radius: var(--radius-pill);
+    }
+  </style>
 </head>
-<body class="bg-[#F5EFE9] md:bg-[#E0CFC3] font-sans">
-    
-    <div id="root"></div>
+<body>
 
-    <script type="text/babel" data-type="module">
-        import React, { useState, useEffect } from 'react';
-        import { createRoot } from 'react-dom/client';
-        import { 
-          MapPin, Calendar, CheckSquare, Car, Info, CreditCard, Home, Navigation, 
-          AlertTriangle, ExternalLink, Utensils, Plane, Menu, X, Phone, Clock, 
-          Users, FileText, User, Luggage, CloudSun, Coins, RefreshCw, Link as LinkIcon, 
-          AlertOctagon, ChevronDown, ChevronUp 
-        } from 'lucide-react';
+<!-- ── Sticky Nav ── -->
+<nav class="top-nav" id="topNav">
+  <div class="nav-pill">
+    <button>←</button>
+    <span class="nav-title">九州之旅</span>
+  </div>
+  <div class="nav-pill">
+    <button>⬆</button>
+    <button>☆</button>
+  </div>
+</nav>
 
-        // --- Firebase Configuration ---
-        const firebaseConfig = {
-          apiKey: "請填寫您的_API_KEY",
-          authDomain: "請填寫您的_AUTH_DOMAIN",
-          projectId: "請填寫您的_PROJECT_ID",
-          storageBucket: "請填寫您的_STORAGE_BUCKET",
-          messagingSenderId: "請填寫您的_MESSAGING_SENDER_ID",
-          appId: "請填寫您的_APP_ID"
-        };
-        
-        import { initializeApp } from 'firebase/app';
-        import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
-        import { getFirestore, doc, onSnapshot, setDoc } from 'firebase/firestore';
+<!-- ── Hero ── -->
+<section class="section hero" id="heroSection">
+  <img class="hero-img" id="heroImg"
+    src="https://images.unsplash.com/photo-1542051841857-5f90071e7989?w=800&q=80"
+    alt="Fukuoka Kyushu">
+  <div class="hero-overlay"></div>
+  <div class="hero-content">
+    <div class="hero-tag">🇯🇵 日本九州</div>
+    <h1>九州<br>之旅</h1>
+    <div class="hero-sub">
+      2026年 5月8日 — 5月15日
+      <span>|</span>
+      福岡・由布院・阿蘇
+    </div>
+  </div>
+</section>
 
-        let app, auth, db;
-        try {
-            if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "請填寫您的_API_KEY") {
-                app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
-                db = getFirestore(app);
-            }
-        } catch (error) {
-            console.warn("Firebase 初始化失敗，雲端同步功能將暫時停用", error);
-        }
-        
-        const appId = 'kyushu-trip-app';
+<!-- ── Live Bar ── -->
+<div class="live-bar" id="liveBar">
+  <div class="live-item">
+    <div class="live-label">🌤 福岡天氣</div>
+    <div class="live-val" id="tempVal"><span class="live-spin">⟳</span></div>
+    <div class="live-sub" id="tempDesc">載入中…</div>
+  </div>
+  <div class="live-item">
+    <div class="live-label">💱 匯率</div>
+    <div class="live-val" id="rateVal"><span class="live-spin">⟳</span></div>
+    <div class="live-sub">JPY / TWD</div>
+  </div>
+  <div class="live-item">
+    <div class="live-label">📅 倒數</div>
+    <div class="live-val" id="countVal">—</div>
+    <div class="live-sub">天後出發</div>
+  </div>
+</div>
 
-        // --- Data & Content ---
-        const flightData = {
-          outbound: {
-            airline: "台灣虎航 IT240", 
-            date: "2026/05/08 (五)",
-            departure: { code: "TPE", time: "06:40", city: "台北", terminal: "第一航廈" },
-            arrival: { code: "FUK", time: "10:05", city: "福岡", terminal: "國際航廈" },
-            baggage: "手提10KG + 托運20KG"
-          },
-          inbound: {
-            user: {
-              airline: "台灣虎航 IT241",
-              date: "2026/05/13 (三)", 
-              departure: { code: "FUK", time: "10:55", city: "福岡", terminal: "國際航廈" },
-              arrival: { code: "TPE", time: "12:35", city: "台北", terminal: "第一航廈" },
-              baggage: "手提10KG + 托運20KG"
-            },
-            others: {
-              airline: "台灣虎航 IT241",
-              date: "2026/05/15 (五)", 
-              departure: { code: "FUK", time: "10:55", city: "福岡", terminal: "國際航廈" },
-              arrival: { code: "TPE", time: "12:35", city: "台北", terminal: "第一航廈" },
-              baggage: "手提10KG + 托運20KG"
-            }
-          }
-        };
+<!-- ── Overview Strip ── -->
+<section class="section overview">
+  <div class="overview-scroll no-scroll">
+    <div class="overview-pill"><span class="icon">📅</span> 8 天 7 夜</div>
+    <div class="overview-pill"><span class="icon">📍</span> 福岡・由布院・阿蘇</div>
+    <div class="overview-pill"><span class="icon">✈️</span> 台灣虎航</div>
+    <div class="overview-pill"><span class="icon">🚗</span> 含自駕</div>
+    <div class="overview-pill"><span class="icon">👥</span> 詡歷・蔬琪・雅雅</div>
+    <div class="overview-pill"><span class="icon">🏨</span> 3 間住宿</div>
+  </div>
+</section>
 
-        const itineraryData = [
-          {
-            day: 1,
-            date: "5/8 (五)",
-            title: "抵達福岡",
-            transport: "BUS (#37 #39)",
-            stay: "Cherim Hakata",
-            activities: [
-              { time: "10:05", event: "抵達福岡機場 (FUK)" },
-              { time: "上午", event: "巴士 (#37, #39) 至 Toko-cho 下車" },
-              { time: "住宿", event: "Check-in: Cherim Hakata" }
-            ],
-            highlight: "機場接送"
-          },
-          {
-            day: 2,
-            date: "5/9 (六)",
-            title: "福岡市區探索",
-            transport: "大眾交通",
-            stay: "Cherim Hakata",
-            activities: [
-              { time: "早餐", event: "Robata no Ito Okashi (需預約)", link: "https://www.tablecheck.com/zh-TW/robatano-itookashi/reserve/landing?utm_source=google" },
-              { time: "全日", event: "購物行程" }
-            ],
-            highlight: "爐端燒早餐 / 購物"
-          },
-          {
-            day: 3,
-            date: "5/10 (日)",
-            title: "自駕啟程：日田與由布院",
-            transport: "RENT CAR",
-            stay: "Yufuin Ryokan Nogiku (野菊)",
-            activities: [
-              { 
-                time: "上午", 
-                event: "klook取車",
-                dropdown: [
-                  { text: "訂單確認編號：YGZ202175" },
-                  { text: "取車日期＆時間：2026年5月10日 10:00 AM" },
-                  { text: "還車日期＆時間：2026年5月11日 20:00 PM" },
-                  { text: "租車公司：KS Rent A Car" },
-                  { text: "取／還車門市資料" },
-                  { text: "地址：3 Chome-2-2 Naka, Hakata Ward, Fukuoka,福岡,日本", link: "https://maps.app.goo.gl/HznFy6St4aXYeQbs6" },
-                  { text: "營業時間：08:00-20:00" },
-                  { text: "電話號碼：81+8098570393" }
-                ]
-              },
-              { time: "下午", event: "前往豆田町 (車程約 1.5 hr)" },
-              { time: "移動", event: "前往由布院 (車程約 1 hr)" },
-              { time: "住宿", event: "Yufuin Ryokan Nogiku (野菊)", link: "https://maps.app.goo.gl/HZ2oiWF1Mz7jqJRUA" }
-            ],
-            highlight: "豆田町 / 由布院"
-          },
-          {
-            day: 4,
-            date: "5/11 (一)",
-            title: "阿蘇火山壯遊",
-            transport: "自駕",
-            stay: "博多市區",
-            activities: [
-              { time: "上午", event: "由布院出發 -> 阿蘇火山 (車程約 2 hr)" },
-              { 
-                time: "景點", 
-                event: "阿蘇火山、草千里 (停留)",
-                dropdown: [
-                  { text: "⚠️ 不用預約，早上 09:30 前到現場排隊。SB方案(7分鐘)最推薦。" }
-                ]
-              },
-              { time: "移動", event: "返回博多市區 (車程約 2.5 hr)" },
-              { 
-                time: "注意", 
-                event: "還車提醒", 
-                dropdown: [
-                  { text: "⚠️ 滿油還車：記得保留加油收據給店員檢查" },
-                  { text: "3 Chome-2-2 Naka, Hakata Ward, Fukuoka", link: "https://maps.app.goo.gl/HznFy6St4aXYeQbs6" }
-                ]
-              }
-            ],
-            highlight: "阿蘇火山 / 草千里"
-          },
-          {
-            day: 5,
-            date: "5/12 (二)",
-            title: "市區休整",
-            transport: "自駕 / 大眾",
-            stay: "博多市區",
-            activities: [
-              { time: "全日", event: "自由活動" },
-              { time: "備註", event: "彈性行程" }
-            ],
-            highlight: "自由行"
-          },
-          {
-            day: 6,
-            date: "5/13 (三)",
-            title: "分道揚鑣",
-            transport: "大眾交通",
-            stay: "博多市區",
-            activities: [
-              { time: "景點", event: "teamLab Forest Fukuoka", link: "https://maps.app.goo.gl/noTjgPwRwBfPms1MA" },
-              { time: "備註", event: "我先回家了 👋" }
-            ],
-            highlight: "詡歷返程"
-          },
-          {
-            day: 7,
-            date: "5/14 (四)",
-            title: "美食巡禮",
-            transport: "大眾交通",
-            stay: "博多市區",
-            activities: [
-              { time: "全日", event: "自由探索 / 美食巡禮" }
-            ],
-            highlight: "自由行"
-          },
-          {
-            day: 8,
-            date: "5/15 (五)",
-            title: "完美句點",
-            transport: "飛機",
-            stay: "溫暖的家",
-            activities: [
-              { time: "上午", event: "The Matcha Tokyo 51A", link: "https://maps.app.goo.gl/Wo893WuXVeji49py5" },
-              { time: "移動", event: "前往機場" },
-              { time: "起飛", event: "揮揮手！回家！" }
-            ],
-            highlight: "蔬琪、雅雅返程"
-          }
-        ];
+<!-- ── Bottom Tab Navigation ── -->
+<div class="tab-bar">
+  <button class="tab-btn active" data-panel="flights">
+    <span class="tab-icon">✈️</span>航班
+  </button>
+  <button class="tab-btn" data-panel="itinerary">
+    <span class="tab-icon">🗓</span>行程
+  </button>
+  <button class="tab-btn" data-panel="hotels">
+    <span class="tab-icon">🏨</span>住宿
+  </button>
+  <button class="tab-btn" data-panel="checklist">
+    <span class="tab-icon">☑️</span>待辦
+  </button>
+  <button class="tab-btn" data-panel="tips">
+    <span class="tab-icon">💡</span>提醒
+  </button>
+</div>
 
-        const initialChecklistData = [
-          { id: 1, text: "Visit Japan Web 入境表單", checked: false, category: "文件", link: "https://www.vjw.digital.go.jp/main/#/vjwplo001" },
-          { id: 2, text: "護照", checked: false, category: "文件" },
-          { id: 3, text: "國際駕照", checked: false, category: "駕照" },
-          { id: 4, text: "駕照日文譯本", checked: false, category: "駕照" },
-          { 
-            id: 13, 
-            text: "KLOOL租車", 
-            checked: false, 
-            category: "交通", 
-            link: "https://www.klook.com/zh-TW/wishlist/?spm=CarRental_Detail.TopNavigation.Wish&clickId=ab97499f04",
-            details: [
-                "🔸 推薦方案：TEP (ToCoo! Expressway Pass)",
-                "   - 優點：包含福岡/北九州都市高速，適合頻繁進出市區。",
-                "🔸 注意事項：",
-                "   - ETC卡領取：通常寄送至機場郵局或首晚飯店，預約時請確認。",
-                "   - 歸還：需使用回郵信封郵寄歸還。"
-            ]
-          },
-          { id: 12, text: "預約機場接送", checked: false, category: "交通" },
-          { id: 6, text: "購買 eSIM", checked: false, category: "網路/保險", link: "https://www.klook.com/zh-TW/wishlist/?spm=CarRental_Detail.TopNavigation.Wish&clickId=ab97499f04" },
-          { id: 7, text: "旅遊平安險證明", checked: false, category: "網路/保險" },
-          { id: 8, text: "下載 Charichari App", checked: false, category: "App" },
-          { id: 9, text: "預約 teamLab 門票", checked: false, category: "票券", link: "https://www.klook.com/zh-TW/wishlist/?spm=CarRental_Detail.TopNavigation.Wish&clickId=ab97499f04" },
-          { id: 11, text: "預約 Robata no Ito Okashi", checked: false, category: "餐廳", link: "https://www.tablecheck.com/zh-TW/robatano-itookashi/reserve/landing?utm_source=google" },
-        ];
+<!-- ═══════════ PANEL: FLIGHTS ═══════════ -->
+<div class="panel active" id="panel-flights">
 
-        const driveGuideData = [
-          {
-            title: "日本駕駛十條鐵律",
-            content: [
-              { title: "靠左行駛", desc: "謹記「左小彎、右大彎」，轉彎後不要開錯車道。" },
-              { title: "止まれ (Tomare)", desc: "看到倒三角標誌，輪胎務必「完全靜止」3秒，確認左右無車再開，警察抓極嚴！" },
-              { title: "禮讓行人", desc: "轉彎時若有人行道，無論有無紅綠燈，必須停車讓行人先過。" },
-              { title: "右轉待轉", desc: "綠燈右轉時，需駛入路口中央待轉區，務必禮讓「對向直行車」先行。" },
-              { title: "右轉箭頭", desc: "若號誌有右轉專用箭頭，需等綠色箭頭亮起才可右轉。" },
-              { title: "黃燈判斷", desc: "日本黃燈秒數短，看到黃燈請準備停車，切勿搶快。" },
-              { title: "平交道", desc: "通過前務必「完全停止」，開車窗聽聲音確認無火車。" },
-              { title: "方向燈/雨刷", desc: "日系右駕車通常右手打方向燈、左手雨刷 (部分歐系進口車除外)。" },
-              { title: "閃大燈禮儀", desc: "在日本，對向車閃大燈通常是「禮讓你先過」的意思，與台灣相反。" },
-              { title: "嚴禁違停", desc: "日本違規停車罰金極高，請務必尋找收費停車場 (P)。" }
-            ],
-            icon: <AlertOctagon className="w-5 h-5 text-[#E94D34]" />
-          }
-        ];
+  <div class="sec-header" style="margin-top:8px;">
+    <h2>航班資訊</h2>
+  </div>
 
-        const getWeatherDesc = (code) => {
-          if (code === 0) return '晴朗';
-          if (code >= 1 && code <= 3) return '多雲';
-          if (code >= 45 && code <= 48) return '有霧';
-          if (code >= 51 && code <= 67) return '有雨';
-          if (code >= 71) return '有雪';
-          if (code >= 80 && code <= 99) return '雷雨';
-          return '晴朗';
-        };
+  <div class="flight-toggle">
+    <button class="active" id="btnMe" onclick="switchFlight('me')">👤 詡歷</button>
+    <button id="btnOthers" onclick="switchFlight('others')">👥 蔬琪・雅雅</button>
+  </div>
 
-        const TabButton = ({ active, onClick, icon, label }) => (
-          <button 
-            onClick={onClick}
-            className={`flex flex-col items-center justify-center w-full md:w-24 py-2 transition-all duration-300 ${active ? 'md:-translate-y-1 scale-105' : 'opacity-60 hover:opacity-100'}`}
-          >
-            <div className={`${active ? 'text-[#E94D34]' : 'text-[#2B3445]'}`}>
-              {icon}
-            </div>
-            <span className={`text-[10px] mt-1 font-bold ${active ? 'text-[#E94D34]' : 'text-[#2B3445]'}`}>{label}</span>
-          </button>
-        );
-
-        const Card = ({ children, className = "" }) => (
-          <div className={`bg-white rounded-xl shadow-sm border border-[#E0CFC3] overflow-hidden ${className}`}>
-            {children}
+  <!-- OUTBOUND -->
+  <div class="flight-card">
+    <div class="flight-header">
+      <div class="airline">✈ 台灣虎航 IT240</div>
+      <div class="direction">去程 OUTBOUND</div>
+    </div>
+    <div class="flight-body">
+      <div class="flight-route">
+        <div class="airport-block">
+          <div class="airport-code">TPE</div>
+          <div class="airport-city">台北</div>
+          <span class="airport-terminal">第一航廈</span>
+        </div>
+        <div class="flight-middle">
+          <div class="flight-times">
+            <span class="flight-time">06:40</span>
+            <span class="flight-time">10:05</span>
           </div>
-        );
+          <div class="flight-line"></div>
+          <div class="flight-direct">DIRECT</div>
+        </div>
+        <div class="airport-block" style="text-align:right">
+          <div class="airport-code">FUK</div>
+          <div class="airport-city">福岡</div>
+          <span class="airport-terminal">國際航廈</span>
+        </div>
+      </div>
+      <div class="flight-meta">
+        <div class="flight-meta-pill">📅 2026/05/08 (五)</div>
+        <div class="flight-meta-pill">🧳 手提10KG + 托運20KG</div>
+      </div>
+    </div>
+  </div>
 
-        const Badge = ({ children, variant = "navy" }) => {
-          const styles = {
-            navy: "bg-[#2B3445] text-[#E0CFC3] border-[#2B3445]",
-            vermilion: "bg-[#E94D34] text-white border-[#E94D34]",
-            beige: "bg-[#E0CFC3] text-[#2B3445] border-[#D0BFB3]",
-            outlineNavy: "bg-transparent text-[#2B3445] border-[#2B3445]",
-            outlineVermilion: "bg-transparent text-[#E94D34] border-[#E94D34]",
-          };
-          return (
-            <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${styles[variant] || styles.navy}`}>
-              {children}
-            </span>
-          );
-        };
-
-        const FlightInfoBlock = ({ flight, type }) => {
-          const isOutbound = type === 'outbound';
-          const iconColor = isOutbound ? 'text-[#2B3445]' : 'text-[#E94D34]';
-          return (
-            <div className={`bg-white p-5 rounded-xl border border-[#E0CFC3] shadow-[0_2px_8px_rgba(43,52,69,0.08)]`}>
-              <div className="flex justify-between items-center mb-4">
-                <div className="flex items-center gap-2">
-                  <Plane className={`w-5 h-5 ${iconColor}`} />
-                  <h3 className="text-sm font-bold text-[#2B3445]">{flight.airline}</h3>
-                </div>
-                <div className="flex items-center gap-1.5 text-xs font-medium text-[#2B3445] bg-[#E0CFC3]/30 px-3 py-1 rounded-full">
-                  <Luggage className="w-3.5 h-3.5" />
-                  <span>{flight.baggage}</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-[#2B3445]/70 mb-5 px-1 font-medium">
-                  <Calendar className={`w-4 h-4 ${iconColor}`} />
-                  <span>{flight.date}</span>
-              </div>
-              <div className="flex justify-between items-center px-1">
-                <div className="flex flex-col">
-                  <span className="text-3xl font-black text-[#2B3445] tracking-tight">{flight.departure.code}</span>
-                  <span className="text-xs text-[#2B3445]/60 font-bold mt-1">{flight.departure.city}</span>
-                  <span className="text-[10px] text-white bg-[#2B3445] px-1.5 py-0.5 rounded mt-1 w-fit">{flight.departure.terminal}</span>
-                </div>
-                <div className="flex flex-col items-center px-4 flex-1">
-                    <span className="text-xs font-bold text-[#2B3445] mb-1">{flight.departure.time}</span>
-                    <div className="w-full h-[2px] bg-[#E0CFC3] relative">
-                      <div className={`absolute right-0 -top-[3px] w-2 h-2 border-r-2 border-t-2 rotate-45 border-[#E0CFC3]`}></div>
-                    </div>
-                    <span className="text-xs font-bold text-[#2B3445] mt-1">{flight.arrival.time}</span>
-                    <span className="text-[10px] text-[#E0CFC3] mt-0.5 font-bold tracking-widest uppercase">Direct</span>
-                </div>
-                <div className="flex flex-col text-right items-end">
-                  <span className="text-3xl font-black text-[#2B3445] tracking-tight">{flight.arrival.code}</span>
-                  <span className="text-xs text-[#2B3445]/60 font-bold mt-1">{flight.arrival.city}</span>
-                  <span className="text-[10px] text-white bg-[#2B3445] px-1.5 py-0.5 rounded mt-1 w-fit">{flight.arrival.terminal}</span>
-                </div>
-              </div>
+  <!-- INBOUND ME -->
+  <div id="inbound-me">
+    <div class="flight-card">
+      <div class="flight-header" style="background:#d03e28;">
+        <div class="airline">✈ 台灣虎航 IT241</div>
+        <div class="direction">回程 INBOUND</div>
+      </div>
+      <div class="flight-body">
+        <div class="flight-route">
+          <div class="airport-block">
+            <div class="airport-code">FUK</div>
+            <div class="airport-city">福岡</div>
+            <span class="airport-terminal">國際航廈</span>
+          </div>
+          <div class="flight-middle">
+            <div class="flight-times">
+              <span class="flight-time">10:55</span>
+              <span class="flight-time">12:35</span>
             </div>
-          );
-        }
+            <div class="flight-line"></div>
+            <div class="flight-direct">DIRECT</div>
+          </div>
+          <div class="airport-block" style="text-align:right">
+            <div class="airport-code">TPE</div>
+            <div class="airport-city">台北</div>
+            <span class="airport-terminal">第一航廈</span>
+          </div>
+        </div>
+        <div class="flight-meta">
+          <div class="flight-meta-pill">📅 2026/05/13 (三)</div>
+          <div class="flight-meta-pill">🧳 手提10KG + 托運20KG</div>
+        </div>
+      </div>
+    </div>
+    <div class="alert-card">
+      <div class="alert-title">⚠️ 重要提醒</div>
+      <a href="https://www.vjw.digital.go.jp/main/#/vjwplo001" target="_blank" class="alert-link">
+        <span>📋 入境表單 (起飛前 6 小時填寫)</span>
+        <span>↗</span>
+      </a>
+    </div>
+  </div>
 
-        // --- Main App Component ---
-        function App() {
-          const [activeTab, setActiveTab] = useState('flights'); // 設定航班為預設首頁
-          const [checklist, setChecklist] = useState(initialChecklistData);
-          const [showVegCard, setShowVegCard] = useState(false);
-          const [flightView, setFlightView] = useState('me'); 
-          const [user, setUser] = useState(null);
-          const [expandedChecklistId, setExpandedChecklistId] = useState(null);
-          const [expandedItineraryId, setExpandedItineraryId] = useState(null);
-          const [expandedGuideIds, setExpandedGuideIds] = useState({});
-
-          const [weatherData, setWeatherData] = useState(null);
-          const [exchangeRate, setExchangeRate] = useState(null);
-          const [loading, setLoading] = useState(true);
-
-          useEffect(() => {
-            if (auth) {
-                const initAuth = async () => {
-                  try {
-                    await signInAnonymously(auth);
-                  } catch (error) {
-                    console.error("Auth failed:", error);
-                  }
-                };
-                initAuth();
-                const unsubscribeAuth = onAuthStateChanged(auth, setUser);
-                return () => unsubscribeAuth();
-            }
-          }, []);
-
-          useEffect(() => {
-            const fetchData = async () => {
-              setLoading(true);
-              let weatherInfo = { temp: 20, desc: "晴朗" }; 
-              let rateInfo = 0.21; 
-
-              try {
-                const weatherRes = await fetch('https://api.open-meteo.com/v1/forecast?latitude=33.5904&longitude=130.4017&current_weather=true&timezone=Asia%2FTokyo');
-                if (weatherRes.ok) {
-                    const weatherJson = await weatherRes.json();
-                    if (weatherJson.current_weather) {
-                        weatherInfo = {
-                            temp: Math.round(weatherJson.current_weather.temperature),
-                            desc: getWeatherDesc(weatherJson.current_weather.weathercode)
-                        };
-                    }
-                }
-              } catch (error) {
-                console.warn("Weather API fetch failed", error);
-              }
-
-              try {
-                const rateRes = await fetch('https://api.frankfurter.app/latest?from=JPY&to=TWD');
-                if (rateRes.ok) {
-                    const rateJson = await rateRes.json();
-                    if (rateJson?.rates?.TWD) {
-                        rateInfo = rateJson.rates.TWD;
-                    }
-                }
-              } catch (error) {
-                 console.warn("Exchange Rate API fetch failed", error);
-              }
-
-              setWeatherData(weatherInfo);
-              setExchangeRate(rateInfo);
-              setLoading(false);
-            };
-            fetchData();
-          }, []);
-
-          useEffect(() => {
-            if (!user || !db) return;
-            const checklistDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'lists', 'checklist_shared');
-
-            const unsubscribeSnapshot = onSnapshot(checklistDocRef, (docSnap) => {
-              if (docSnap.exists()) {
-                const data = docSnap.data();
-                if (data.items && Array.isArray(data.items)) {
-                  const mergedList = initialChecklistData.map(item => {
-                    const savedItem = data.items.find(s => s.id === item.id);
-                    return savedItem ? { ...item, checked: savedItem.checked } : item;
-                  });
-                  setChecklist(mergedList);
-                }
-              } else {
-                const initialSaveData = initialChecklistData.map(({ id, checked }) => ({ id, checked }));
-                setDoc(checklistDocRef, { items: initialSaveData }, { merge: true });
-              }
-            }, (error) => console.error("Firestore snapshot error:", error));
-
-            return () => unsubscribeSnapshot();
-          }, [user]);
-
-          const toggleCheck = async (id) => {
-            const newChecklist = checklist.map(item => item.id === id ? { ...item, checked: !item.checked } : item);
-            setChecklist(newChecklist);
-            if (!user || !db) return;
-            try {
-                const checklistDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'lists', 'checklist_shared');
-                await setDoc(checklistDocRef, { items: newChecklist.map(({ id, checked }) => ({ id, checked })) }, { merge: true });
-            } catch (err) {}
-          };
-
-          const toggleChecklistExpand = (id) => setExpandedChecklistId(expandedChecklistId === id ? null : id);
-          const toggleItineraryExpand = (id) => setExpandedItineraryId(expandedItineraryId === id ? null : id);
-          const toggleGuideExpand = (idx) => setExpandedGuideIds(prev => ({ ...prev, [idx]: !prev[idx] }));
-          const calculateProgress = () => Math.round((checklist.filter(i => i.checked).length / checklist.length) * 100);
-
-          // ---------------------------------
-          // Views
-          // ---------------------------------
-          const FlightsView = () => (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
-              <div className="flex p-1 bg-white/50 backdrop-blur-sm rounded-xl mb-6 shadow-sm border border-[#E0CFC3]">
-                <button onClick={() => setFlightView('me')} className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${flightView === 'me' ? 'bg-[#2B3445] text-[#E0CFC3] shadow-md transform scale-[1.02]' : 'text-[#2B3445]/60 hover:text-[#2B3445]'}`}>
-                  <User className="w-4 h-4" /> 詡歷
-                </button>
-                <button onClick={() => setFlightView('others')} className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${flightView === 'others' ? 'bg-[#E94D34] text-white shadow-md transform scale-[1.02]' : 'text-[#2B3445]/60 hover:text-[#E94D34]'}`}>
-                  <Users className="w-4 h-4" /> 蔬琪、雅雅
-                </button>
-              </div>
-
-              <div className="md:grid md:grid-cols-2 md:gap-8 space-y-4 md:space-y-0">
-                {flightView === 'me' ? (
-                  <>
-                     <div className="space-y-2">
-                        <div className="flex items-center gap-2 mb-3 ml-1">
-                            <span className="w-2 h-2 rounded-full bg-[#2B3445]"></span>
-                            <span className="text-xs font-bold text-[#2B3445] uppercase tracking-wider">去程 Outbound</span>
-                        </div>
-                        <FlightInfoBlock flight={flightData.outbound} type="outbound" />
-                        <div className="bg-[#E94D34]/10 border border-[#E94D34]/30 rounded-lg p-3 mt-4">
-                            <div className="flex items-center gap-2 mb-2">
-                                <AlertTriangle className="w-4 h-4 text-[#E94D34]" />
-                                <span className="text-sm font-bold text-[#E94D34]">重要提醒</span>
-                            </div>
-                            <div className="space-y-2">
-                                <a href="https://www.vjw.digital.go.jp/main/#/vjwplo001" target="_blank" className="flex items-center justify-between bg-white/60 p-2 rounded hover:bg-white transition-colors cursor-pointer group">
-                                    <span className="text-xs font-medium text-[#2B3445] flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#E94D34]"></span>入境表單 (起飛前6hr)</span>
-                                    <ExternalLink className="w-3 h-3 text-[#2B3445]/40 group-hover:text-[#E94D34]" />
-                                </a>
-                            </div>
-                        </div>
-                     </div>
-                     <div className="space-y-2">
-                        <div className="flex items-center gap-2 mb-3 mt-6 md:mt-0 ml-1">
-                            <span className="w-2 h-2 rounded-full bg-[#E94D34]"></span>
-                            <span className="text-xs font-bold text-[#E94D34] uppercase tracking-wider">回程 Inbound</span>
-                        </div>
-                        <FlightInfoBlock flight={flightData.inbound.user} type="inbound" />
-                     </div>
-                  </>
-                ) : (
-                  <>
-                     <div className="space-y-2">
-                        <div className="flex items-center gap-2 mb-3 ml-1">
-                            <span className="w-2 h-2 rounded-full bg-[#2B3445]"></span>
-                            <span className="text-xs font-bold text-[#2B3445] uppercase tracking-wider">去程 Outbound</span>
-                        </div>
-                        <FlightInfoBlock flight={flightData.outbound} type="outbound" />
-                     </div>
-                     <div className="space-y-2">
-                        <div className="flex items-center gap-2 mb-3 mt-6 md:mt-0 ml-1">
-                            <span className="w-2 h-2 rounded-full bg-[#E94D34]"></span>
-                            <span className="text-xs font-bold text-[#E94D34] uppercase tracking-wider">回程 Inbound</span>
-                        </div>
-                        <FlightInfoBlock flight={flightData.inbound.others} type="inbound" />
-                     </div>
-                  </>
-                )}
-              </div>
+  <!-- INBOUND OTHERS -->
+  <div id="inbound-others" style="display:none">
+    <div class="flight-card">
+      <div class="flight-header" style="background:#d03e28;">
+        <div class="airline">✈ 台灣虎航 IT241</div>
+        <div class="direction">回程 INBOUND</div>
+      </div>
+      <div class="flight-body">
+        <div class="flight-route">
+          <div class="airport-block">
+            <div class="airport-code">FUK</div>
+            <div class="airport-city">福岡</div>
+            <span class="airport-terminal">國際航廈</span>
+          </div>
+          <div class="flight-middle">
+            <div class="flight-times">
+              <span class="flight-time">10:55</span>
+              <span class="flight-time">12:35</span>
             </div>
-          );
+            <div class="flight-line"></div>
+            <div class="flight-direct">DIRECT</div>
+          </div>
+          <div class="airport-block" style="text-align:right">
+            <div class="airport-code">TPE</div>
+            <div class="airport-city">台北</div>
+            <span class="airport-terminal">第一航廈</span>
+          </div>
+        </div>
+        <div class="flight-meta">
+          <div class="flight-meta-pill">📅 2026/05/15 (五)</div>
+          <div class="flight-meta-pill">🧳 手提10KG + 托運20KG</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-          const ItineraryView = () => (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
-              <div className="md:hidden bg-[#2B3445] text-[#E0CFC3] p-6 rounded-b-[2rem] shadow-lg mb-6 border-b-4 border-[#E94D34] -mx-4 -mt-6">
-                <h1 className="text-2xl font-bold mb-1">每日行程 🗓️</h1>
-                <p className="text-[#E0CFC3]/80 text-sm">福岡 • 由布院 • 阿蘇火山</p>
-              </div>
-              
-              <div className="space-y-4">
-                {itineraryData.map((day) => (
-                  <Card key={day.day} className="relative group overflow-visible transition-all hover:shadow-md">
-                    <div className={`absolute top-0 left-0 w-1.5 h-full ${day.highlight ? 'bg-[#E94D34]' : 'bg-[#2B3445]'} rounded-l-xl`}></div>
-                    <div className="p-4 pl-6 md:p-6 md:pl-8 flex flex-col md:flex-row md:items-stretch gap-4 md:gap-8">
-                      {/* Left Block (Desktop) / Top Block (Mobile) */}
-                      <div className="md:w-1/3 flex-shrink-0 border-b md:border-b-0 md:border-r border-[#E0CFC3]/50 pb-4 md:pb-0 md:pr-6">
-                        <div className="flex justify-between items-start mb-2">
-                          <div>
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-xs font-bold text-[#2B3445]/50 uppercase tracking-wider">Day {day.day}</span>
-                              <span className="text-xs font-bold text-[#2B3445]/70">{day.date}</span>
-                            </div>
-                            <h3 className="text-xl md:text-2xl font-bold text-[#2B3445]">{day.title}</h3>
-                          </div>
-                          <div className="md:hidden">
-                             {day.transport.includes("CAR") || day.transport.includes("自駕") ? <Car className="w-5 h-5 text-[#E94D34]" /> : <MapPin className="w-5 h-5 text-[#E0CFC3]" />}
-                          </div>
-                        </div>
-                        <div className="mt-4 flex flex-wrap gap-2">
-                          <Badge variant="beige">{day.stay}</Badge>
-                          {day.highlight && <Badge variant="outlineVermilion">★ {day.highlight}</Badge>}
-                        </div>
-                      </div>
-                      
-                      {/* Right Block (Desktop) / Bottom Block (Mobile) */}
-                      <div className="flex-1 space-y-4 md:py-2">
-                        {day.activities.map((act, idx) => {
-                          const itemId = `${day.day}-${idx}`;
-                          return (
-                            <div key={idx} className="flex gap-4 text-sm items-start">
-                              <span className="text-[#2B3445]/50 min-w-[3.5rem] text-xs pt-1 font-mono">{act.time}</span>
-                              <div className="flex-1 bg-white md:bg-[#F5EFE9]/50 p-3 rounded-lg border border-[#E0CFC3]/40">
-                                <div className="text-[#2B3445] font-medium flex items-center justify-between gap-2">
-                                  <span className="flex items-center gap-1">
-                                      {act.link && !act.dropdown ? (
-                                        <a href={act.link} target="_blank" rel="noopener noreferrer" className="hover:text-[#E94D34] hover:underline flex items-center gap-1">
-                                          {act.event} <ExternalLink className="w-3 h-3 text-[#E94D34] inline" />
-                                        </a>
-                                      ) : ( act.event )}
-                                  </span>
-                                  {act.dropdown && (
-                                    <button onClick={() => toggleItineraryExpand(itemId)} className="p-1.5 rounded-full bg-[#E0CFC3]/30 text-[#2B3445] hover:bg-[#E0CFC3] transition-colors">
-                                      {expandedItineraryId === itemId ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                                    </button>
-                                  )}
-                                </div>
-                                {act.dropdown && expandedItineraryId === itemId && (
-                                  <div className="mt-3 pt-3 border-t border-[#E0CFC3]/50">
-                                    {act.dropdown.map((dropItem, dropIdx) => (
-                                      <div key={dropIdx} className="py-1">
-                                        {dropItem.link ? (
-                                          <a href={dropItem.link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs font-bold text-[#E94D34] hover:underline bg-white p-2 rounded border border-[#E0CFC3]/40 inline-flex">
-                                            <MapPin className="w-3 h-3" /> {dropItem.text}
-                                          </a>
-                                        ) : (
-                                          <p className="text-xs text-[#2B3445]/80 leading-relaxed pl-2 border-l-2 border-[#E94D34]">{dropItem.text}</p>
-                                        )}
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          );
+</div><!-- /panel-flights -->
 
-          const NotesView = () => (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
-              <h2 className="text-2xl font-bold text-[#2B3445] mb-6 flex items-center gap-2">
-                <Info className="w-6 h-6 text-[#E94D34]" /> 注意事項 & 工具
-              </h2>
-              
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                  {/* Veg Card */}
-                  <Card className="bg-gradient-to-br from-[#F5EFE9] to-[#E0CFC3]/30 border-[#E0CFC3] cursor-pointer hover:border-[#E94D34] transition-all hover:shadow-md transform hover:-translate-y-1">
-                    <div className="p-6 h-full flex flex-col justify-between" onClick={() => setShowVegCard(true)}>
-                      <div>
-                          <div className="flex items-center gap-3 mb-4">
-                            <div className="p-3 bg-[#2B3445] rounded-xl text-[#E0CFC3]">
-                              <Utensils className="w-6 h-6" />
-                            </div>
-                            <div>
-                              <h3 className="font-bold text-lg text-[#2B3445]">飲食溝通卡</h3>
-                              <p className="text-xs text-[#2B3445]/60 mt-0.5">點擊放大顯示給店員</p>
-                            </div>
-                          </div>
-                          <p className="text-sm text-[#2B3445]/80 bg-white p-4 rounded-lg border border-[#E0CFC3] shadow-inner italic">
-                            "不好意思，有蔥、洋蔥還有大蒜嗎..."
-                          </p>
-                      </div>
-                    </div>
-                  </Card>
 
-                  {/* Guides */}
-                  {driveGuideData.map((guide, idx) => {
-                     const isToggleable = Array.isArray(guide.content); 
-                     const isExpanded = expandedGuideIds[idx] !== undefined ? expandedGuideIds[idx] : true; // 電腦版預設展開
-                     return (
-                    <Card key={idx} className="md:col-span-2 lg:col-span-2 h-fit">
-                      <div className="p-6">
-                        <div className="flex items-center justify-between mb-4 cursor-pointer" onClick={() => isToggleable && toggleGuideExpand(idx)}>
-                          <div className="flex items-center gap-3">
-                            <div className="p-3 bg-[#E94D34]/10 rounded-xl">{guide.icon}</div>
-                            <h3 className="font-bold text-lg text-[#2B3445]">{guide.title}</h3>
-                          </div>
-                          {isToggleable && (
-                            <div className="text-[#2B3445]/60 p-1 bg-[#F5EFE9] rounded-full md:hidden">
-                              {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                            </div>
-                          )}
-                        </div>
-                        
-                        {(isExpanded || window.innerWidth >= 768) && (
-                        <div className="pt-2 border-t border-[#E0CFC3]/50">
-                          {Array.isArray(guide.content) ? (
-                            <div className="grid md:grid-cols-2 gap-4 mt-4">
-                              {guide.content.map((item, i) => (
-                                <div key={i} className="bg-[#F5EFE9]/50 p-3 rounded-lg">
-                                  <div className="flex items-baseline gap-1.5 mb-1">
-                                      <span className="text-[#E94D34] font-black text-sm">{i + 1}.</span>
-                                      <span className="font-bold text-[#2B3445] text-sm">{item.title}</span>
-                                  </div>
-                                  <p className="text-xs text-[#2B3445]/70 pl-4 leading-relaxed">{item.desc}</p>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className="text-sm text-[#2B3445]/70 leading-relaxed mt-4">{guide.content}</p>
-                          )}
-                        </div>
-                        )}
-                      </div>
-                    </Card>
-                  )})}
-              </div>
-            </div>
-          );
+<!-- ═══════════ PANEL: ITINERARY ═══════════ -->
+<div class="panel" id="panel-itinerary">
 
-          const ChecklistView = () => (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
-              <div className="flex justify-between items-end mb-2">
-                <h2 className="text-2xl font-bold text-[#2B3445] flex items-center gap-2">
-                    <CheckSquare className="w-6 h-6 text-[#E94D34]" /> 待辦事項
-                </h2>
-                <span className="text-sm font-bold bg-[#E94D34] text-white px-3 py-1 rounded-full">{calculateProgress()}% 完成</span>
-              </div>
+  <div class="sec-header" style="margin-top:8px;">
+    <h2>每日行程</h2>
+    <div class="badge">8 天</div>
+  </div>
 
-              <div className="w-full bg-[#E0CFC3] rounded-full h-3 mb-8 overflow-hidden shadow-inner">
-                <div className="bg-[#2B3445] h-3 rounded-full transition-all duration-700 ease-out" style={{ width: `${calculateProgress()}%` }}></div>
-              </div>
+  <!-- Day 1 -->
+  <div class="day-card" data-day="1">
+    <img class="day-card-img" src="https://images.unsplash.com/photo-1583108411843-afee0f33ec00?w=600&q=70" alt="福岡機場">
+    <div class="day-header" onclick="toggleDay(this)">
+      <div class="day-badge">1</div>
+      <div class="day-info">
+        <div class="day-meta">5/8 (五) &nbsp;·&nbsp; 抵台後首日</div>
+        <div class="day-title">抵達福岡</div>
+      </div>
+      <span style="color:var(--text-secondary);font-size:20px">✈</span>
+    </div>
+    <div class="day-tags">
+      <span class="tag transport">🚌 BUS #37 #39</span>
+      <span class="tag">🏨 Cherim Hakata</span>
+      <span class="tag highlight">✈ 抵達日</span>
+    </div>
+    <button class="expand-btn" onclick="toggleDay(this.closest('.day-card').querySelector('.day-header'))">
+      查看行程 <span class="expand-icon">▼</span>
+    </button>
+    <div class="day-timeline">
+      <div class="timeline-item">
+        <div class="timeline-time">10:05</div>
+        <div class="timeline-dot key"></div>
+        <div class="timeline-content"><div class="timeline-event">抵達福岡機場 (FUK)</div></div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-time">上午</div>
+        <div class="timeline-dot"></div>
+        <div class="timeline-content"><div class="timeline-event">巴士 (#37, #39) 至 Toko-cho 下車</div></div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-time">住宿</div>
+        <div class="timeline-dot key"></div>
+        <div class="timeline-content"><div class="timeline-event">Check-in: Cherim Hakata</div></div>
+      </div>
+    </div>
+  </div>
 
-              <div className="grid md:grid-cols-2 gap-4">
-                {checklist.map((item) => (
-                  <div key={item.id} onClick={() => toggleCheck(item.id)}
-                    className={`flex flex-col p-5 rounded-xl border transition-all cursor-pointer select-none hover:shadow-md ${
-                      item.checked ? 'bg-[#E0CFC3]/30 border-transparent opacity-70' : 'bg-white border-[#E0CFC3] hover:border-[#2B3445]'
-                    }`}
-                  >
-                    <div className="flex items-start w-full">
-                      <div className={`flex-shrink-0 w-6 h-6 rounded-md border-2 flex items-center justify-center mr-4 transition-colors mt-0.5 ${
-                        item.checked ? 'bg-[#2B3445] border-[#2B3445]' : 'border-[#E0CFC3]'
-                      }`}>
-                        {item.checked && <CheckSquare className="w-4 h-4 text-[#E0CFC3]" />}
-                      </div>
-                      <div className="flex-1">
-                        <p className={`text-base font-bold mb-2 ${item.checked ? 'text-[#2B3445]/40 line-through' : 'text-[#2B3445]'}`}>{item.text}</p>
-                        
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-[10px] text-[#2B3445]/70 bg-[#F5EFE9] px-2 py-1 rounded font-bold tracking-wider">{item.category}</span>
-                          {item.link && (
-                              <a href={item.link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="flex items-center gap-1 text-[10px] font-bold text-white bg-[#E94D34] px-2 py-1 rounded-full hover:bg-[#D63E26] transition-colors shadow-sm">
-                                  🔗 前往連結
-                              </a>
-                          )}
-                        </div>
-                      </div>
-                      {item.details && (
-                        <button onClick={(e) => { e.stopPropagation(); toggleChecklistExpand(item.id); }} className="p-2 ml-2 bg-[#F5EFE9] rounded-full text-[#2B3445]/60 hover:text-[#E94D34] transition-colors">
-                          {expandedChecklistId === item.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                        </button>
-                      )}
-                    </div>
+  <!-- Day 2 -->
+  <div class="day-card" data-day="2">
+    <img class="day-card-img" src="https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=600&q=70" alt="福岡市區">
+    <div class="day-header" onclick="toggleDay(this)">
+      <div class="day-badge">2</div>
+      <div class="day-info">
+        <div class="day-meta">5/9 (六)</div>
+        <div class="day-title">福岡市區探索</div>
+      </div>
+      <span style="color:var(--text-secondary);font-size:20px">🛍</span>
+    </div>
+    <div class="day-tags">
+      <span class="tag transport">🚇 大眾交通</span>
+      <span class="tag">🏨 Cherim Hakata</span>
+      <span class="tag highlight">★ 爐端燒早餐</span>
+    </div>
+    <button class="expand-btn" onclick="toggleDay(this.closest('.day-card').querySelector('.day-header'))">
+      查看行程 <span class="expand-icon">▼</span>
+    </button>
+    <div class="day-timeline">
+      <div class="timeline-item">
+        <div class="timeline-time">早餐</div>
+        <div class="timeline-dot key"></div>
+        <div class="timeline-content">
+          <div class="timeline-event">Robata no Ito Okashi（需預約）</div>
+          <a href="https://www.tablecheck.com/zh-TW/robatano-itookashi/reserve/landing?utm_source=google" target="_blank" class="timeline-link">🔗 立即預約</a>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-time">全日</div>
+        <div class="timeline-dot"></div>
+        <div class="timeline-content"><div class="timeline-event">購物行程・自由探索</div></div>
+      </div>
+    </div>
+  </div>
 
-                    {expandedChecklistId === item.id && item.details && (
-                        <div className="mt-4 pt-4 border-t border-[#E0CFC3]/50 text-sm text-[#2B3445]/80 bg-[#F5EFE9]/50 p-4 rounded-lg">
-                            {item.details.map((detail, idx) => (
-                                <p key={idx} className="mb-1.5 leading-relaxed flex items-start gap-2">
-                                  <span className="text-[#E94D34] mt-1">•</span> <span>{detail.replace('🔸 ', '').replace('   - ', '')}</span>
-                                </p>
-                            ))}
-                        </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
+  <!-- Day 3 -->
+  <div class="day-card" data-day="3">
+    <img class="day-card-img" src="https://images.unsplash.com/photo-1508739773434-c26b3d09e071?w=600&q=70" alt="由布院">
+    <div class="day-header" onclick="toggleDay(this)">
+      <div class="day-badge">3</div>
+      <div class="day-info">
+        <div class="day-meta">5/10 (日)</div>
+        <div class="day-title">日田 · 由布院</div>
+      </div>
+      <span style="color:var(--text-secondary);font-size:20px">🚗</span>
+    </div>
+    <div class="day-tags">
+      <span class="tag transport">🚗 自駕出發</span>
+      <span class="tag">🏨 野菊旅館</span>
+      <span class="tag highlight">★ 豆田町 / 由布院</span>
+    </div>
+    <button class="expand-btn" onclick="toggleDay(this.closest('.day-card').querySelector('.day-header'))">
+      查看行程 <span class="expand-icon">▼</span>
+    </button>
+    <div class="day-timeline">
+      <div class="timeline-item">
+        <div class="timeline-time">上午</div>
+        <div class="timeline-dot key"></div>
+        <div class="timeline-content">
+          <div class="timeline-event">Klook 取車</div>
+          <div class="timeline-dropdown">
+            <div class="timeline-dropdown-item">📋 訂單：YGZ202175</div>
+            <div class="timeline-dropdown-item">⏰ 取車：2026/5/10 10:00 AM</div>
+            <div class="timeline-dropdown-item">🔄 還車：2026/5/11 20:00 PM</div>
+            <div class="timeline-dropdown-item">🚗 KS Rent A Car · 電話：81+8098570393</div>
+            <a href="https://maps.app.goo.gl/HznFy6St4aXYeQbs6" target="_blank" class="timeline-dropdown-link">📍 3 Chome-2-2 Naka, Hakata Ward（點擊導航）</a>
+          </div>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-time">下午</div>
+        <div class="timeline-dot"></div>
+        <div class="timeline-content"><div class="timeline-event">前往豆田町（車程約 1.5 hr）</div></div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-time">傍晚</div>
+        <div class="timeline-dot"></div>
+        <div class="timeline-content"><div class="timeline-event">前往由布院（車程約 1 hr）</div></div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-time">住宿</div>
+        <div class="timeline-dot key"></div>
+        <div class="timeline-content">
+          <div class="timeline-event">Yufuin Ryokan Nogiku（野菊）</div>
+          <a href="https://maps.app.goo.gl/HZ2oiWF1Mz7jqJRUA" target="_blank" class="timeline-link">🗺 在地圖上查看</a>
+        </div>
+      </div>
+    </div>
+  </div>
 
-          // ---------------------------------
-          // Layout
-          // ---------------------------------
-          return (
-            <div className="min-h-screen md:h-screen w-full relative flex flex-col md:flex-row overflow-hidden selection:bg-[#E94D34] selection:text-white">
-              
-              {/* --- Sidebar (Desktop) / Top Header (Mobile) --- */}
-              <div className="md:bg-[#2B3445] md:w-80 md:h-full flex-shrink-0 pt-8 pb-6 md:pb-8 px-6 md:px-8 md:rounded-r-[2.5rem] relative z-20 md:shadow-[0_0_40px_rgba(0,0,0,0.2)] flex flex-col transition-all">
-                  <div className="flex justify-between items-start mb-8 md:mb-12">
-                      <div>
-                        <h1 className="text-3xl md:text-4xl font-black text-[#2B3445] md:text-[#E0CFC3] tracking-tight leading-none mb-2">九州<br className="hidden md:block"/>之旅</h1>
-                        <p className="text-[#2B3445]/60 md:text-[#E0CFC3]/60 text-xs font-bold tracking-widest uppercase">Fukuoka Trip</p>
-                      </div>
-                      <span className="text-[#E94D34] font-black text-xl bg-[#E94D34]/10 md:bg-[#E0CFC3]/10 px-3 py-1 rounded-lg">2026</span>
-                  </div>
+  <!-- Day 4 -->
+  <div class="day-card" data-day="4">
+    <img class="day-card-img" src="https://images.unsplash.com/photo-1570459027562-4a916cc6113f?w=600&q=70" alt="阿蘇火山">
+    <div class="day-header" onclick="toggleDay(this)">
+      <div class="day-badge">4</div>
+      <div class="day-info">
+        <div class="day-meta">5/11 (一)</div>
+        <div class="day-title">阿蘇火山壯遊</div>
+      </div>
+      <span style="color:var(--text-secondary);font-size:20px">🌋</span>
+    </div>
+    <div class="day-tags">
+      <span class="tag transport">🚗 自駕</span>
+      <span class="tag">🏨 博多市區</span>
+      <span class="tag highlight">★ 阿蘇 / 草千里</span>
+    </div>
+    <button class="expand-btn" onclick="toggleDay(this.closest('.day-card').querySelector('.day-header'))">
+      查看行程 <span class="expand-icon">▼</span>
+    </button>
+    <div class="day-timeline">
+      <div class="timeline-item">
+        <div class="timeline-time">上午</div>
+        <div class="timeline-dot key"></div>
+        <div class="timeline-content"><div class="timeline-event">由布院出發 → 阿蘇火山（車程約 2 hr）</div></div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-time">景點</div>
+        <div class="timeline-dot key"></div>
+        <div class="timeline-content">
+          <div class="timeline-event">阿蘇火山・草千里（停留）</div>
+          <div class="timeline-dropdown">
+            <div class="timeline-dropdown-item">⚠️ 不用預約，早上 09:30 前到現場排隊。SB方案（7分鐘）最推薦。</div>
+          </div>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-time">移動</div>
+        <div class="timeline-dot"></div>
+        <div class="timeline-content"><div class="timeline-event">返回博多市區（車程約 2.5 hr）</div></div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-time">注意</div>
+        <div class="timeline-dot key"></div>
+        <div class="timeline-content">
+          <div class="timeline-event">⛽ 滿油還車提醒</div>
+          <div class="timeline-dropdown">
+            <div class="timeline-dropdown-item">⚠️ 記得保留加油收據給店員檢查</div>
+            <a href="https://maps.app.goo.gl/HznFy6St4aXYeQbs6" target="_blank" class="timeline-dropdown-link">📍 還車地點（點擊導航）</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-1 gap-4 mb-4">
-                      <div className="bg-white/60 md:bg-[#E0CFC3]/10 border border-[#E0CFC3] md:border-[#E0CFC3]/10 hover:border-[#2B3445]/30 md:hover:border-[#E0CFC3]/30 transition-colors rounded-2xl p-4 flex flex-col md:flex-row items-center md:justify-between backdrop-blur-md shadow-sm md:shadow-none">
-                          <div className="flex items-center gap-2 mb-2 md:mb-0">
-                              <CloudSun className="w-5 h-5 text-[#E94D34]" />
-                              <span className="text-[#2B3445] md:text-[#E0CFC3] text-xs font-bold">福岡天氣</span>
-                          </div>
-                          {loading ? <RefreshCw className="w-5 h-5 text-[#2B3445] md:text-[#E0CFC3] animate-spin" /> : (
-                            <div className="text-center md:text-right">
-                              <div className="text-2xl font-black text-[#2B3445] md:text-white">{weatherData?.temp ?? '--'}°<span className="text-sm font-normal text-[#2B3445]/80 md:text-[#E0CFC3]/80">C</span></div>
-                              <span className="text-[10px] text-[#2B3445]/60 md:text-[#E0CFC3]/60">{weatherData?.desc ?? '--'}</span>
-                            </div>
-                          )}
-                      </div>
+  <!-- Day 5 -->
+  <div class="day-card" data-day="5">
+    <img class="day-card-img" src="https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=600&q=70" alt="博多">
+    <div class="day-header" onclick="toggleDay(this)">
+      <div class="day-badge">5</div>
+      <div class="day-info">
+        <div class="day-meta">5/12 (二)</div>
+        <div class="day-title">市區休整</div>
+      </div>
+      <span style="color:var(--text-secondary);font-size:20px">🌸</span>
+    </div>
+    <div class="day-tags">
+      <span class="tag transport">🚇 大眾交通</span>
+      <span class="tag">🏨 博多市區</span>
+      <span class="tag highlight">★ 自由行</span>
+    </div>
+    <button class="expand-btn" onclick="toggleDay(this.closest('.day-card').querySelector('.day-header'))">
+      查看行程 <span class="expand-icon">▼</span>
+    </button>
+    <div class="day-timeline">
+      <div class="timeline-item">
+        <div class="timeline-time">全日</div>
+        <div class="timeline-dot"></div>
+        <div class="timeline-content"><div class="timeline-event">自由活動・彈性行程</div></div>
+      </div>
+    </div>
+  </div>
 
-                      <div className="bg-white/60 md:bg-[#E0CFC3]/10 border border-[#E0CFC3] md:border-[#E0CFC3]/10 hover:border-[#2B3445]/30 md:hover:border-[#E0CFC3]/30 transition-colors rounded-2xl p-4 flex flex-col md:flex-row items-center md:justify-between backdrop-blur-md shadow-sm md:shadow-none">
-                          <div className="flex items-center gap-2 mb-2 md:mb-0">
-                              <Coins className="w-5 h-5 text-[#E94D34]" />
-                              <span className="text-[#2B3445] md:text-[#E0CFC3] text-xs font-bold">即時匯率</span>
-                          </div>
-                          {loading ? <RefreshCw className="w-5 h-5 text-[#2B3445] md:text-[#E0CFC3] animate-spin" /> : (
-                            <div className="text-center md:text-right">
-                              <div className="text-2xl font-black text-[#2B3445] md:text-white">{exchangeRate ? exchangeRate.toFixed(3) : '--'}</div>
-                              <span className="text-[10px] text-[#2B3445]/60 md:text-[#E0CFC3]/60">JPY/TWD</span>
-                            </div>
-                          )}
-                      </div>
-                  </div>
-                  <p className="text-center md:text-left text-[#2B3445]/40 md:text-[#E0CFC3]/40 text-[10px] mt-2 flex items-center justify-center md:justify-start gap-1">
-                      <Clock className="w-3 h-3" /> <span>資料自動更新中</span>
-                  </p>
+  <!-- Day 6 -->
+  <div class="day-card" data-day="6">
+    <img class="day-card-img" src="https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=600&q=70" alt="teamLab">
+    <div class="day-header" onclick="toggleDay(this)">
+      <div class="day-badge">6</div>
+      <div class="day-info">
+        <div class="day-meta">5/13 (三)</div>
+        <div class="day-title">分道揚鑣</div>
+      </div>
+      <span style="color:var(--text-secondary);font-size:20px">🎨</span>
+    </div>
+    <div class="day-tags">
+      <span class="tag transport">🚇 大眾交通</span>
+      <span class="tag">🏨 博多市區</span>
+      <span class="tag highlight">★ 詡歷返程</span>
+    </div>
+    <button class="expand-btn" onclick="toggleDay(this.closest('.day-card').querySelector('.day-header'))">
+      查看行程 <span class="expand-icon">▼</span>
+    </button>
+    <div class="day-timeline">
+      <div class="timeline-item">
+        <div class="timeline-time">景點</div>
+        <div class="timeline-dot key"></div>
+        <div class="timeline-content">
+          <div class="timeline-event">teamLab Forest Fukuoka</div>
+          <a href="https://maps.app.goo.gl/noTjgPwRwBfPms1MA" target="_blank" class="timeline-link">🗺 查看地圖</a>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-time">備註</div>
+        <div class="timeline-dot"></div>
+        <div class="timeline-content"><div class="timeline-event">詡歷先回家了 👋</div></div>
+      </div>
+    </div>
+  </div>
 
-                  {/* Desktop Only Extra Info */}
-                  <div className="hidden md:block mt-auto text-[#E0CFC3]/40 text-xs leading-relaxed border-t border-[#E0CFC3]/20 pt-6">
-                      <p className="font-bold text-[#E0CFC3]/70 mb-2">同行夥伴</p>
-                      <div className="flex items-center gap-3">
-                          <span className="w-8 h-8 rounded-full bg-[#E0CFC3]/20 flex items-center justify-center font-bold text-white">詡</span>
-                          <span className="w-8 h-8 rounded-full bg-[#E0CFC3]/20 flex items-center justify-center font-bold text-white -ml-2 border border-[#2B3445]">蔬</span>
-                          <span className="w-8 h-8 rounded-full bg-[#E0CFC3]/20 flex items-center justify-center font-bold text-white -ml-2 border border-[#2B3445]">雅</span>
-                      </div>
-                  </div>
-              </div>
-              
-              {/* --- Main Content Area --- */}
-              <div className="flex-1 w-full md:h-full overflow-y-auto no-scrollbar pb-32 md:pb-32 px-4 md:px-12 lg:px-20 pt-6 md:pt-12 relative z-10 bg-[#F5EFE9] md:bg-[#E0CFC3]">
-                  <div className="max-w-5xl mx-auto">
-                      {activeTab === 'flights' && <FlightsView />}
-                      {activeTab === 'itinerary' && <ItineraryView />}
-                      {activeTab === 'notes' && <NotesView />}
-                      {activeTab === 'checklist' && <ChecklistView />}
-                  </div>
-              </div>
+  <!-- Day 7 -->
+  <div class="day-card" data-day="7">
+    <img class="day-card-img" src="https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=600&q=70" alt="美食">
+    <div class="day-header" onclick="toggleDay(this)">
+      <div class="day-badge">7</div>
+      <div class="day-info">
+        <div class="day-meta">5/14 (四)</div>
+        <div class="day-title">美食巡禮</div>
+      </div>
+      <span style="color:var(--text-secondary);font-size:20px">🍜</span>
+    </div>
+    <div class="day-tags">
+      <span class="tag transport">🚇 大眾交通</span>
+      <span class="tag">🏨 博多市區</span>
+      <span class="tag highlight">★ 自由行</span>
+    </div>
+    <button class="expand-btn" onclick="toggleDay(this.closest('.day-card').querySelector('.day-header'))">
+      查看行程 <span class="expand-icon">▼</span>
+    </button>
+    <div class="day-timeline">
+      <div class="timeline-item">
+        <div class="timeline-time">全日</div>
+        <div class="timeline-dot"></div>
+        <div class="timeline-content"><div class="timeline-event">自由探索・美食巡禮</div></div>
+      </div>
+    </div>
+  </div>
 
-              {/* --- Floating Bottom Navigation --- */}
-              <div className="fixed bottom-0 left-0 w-full md:w-auto md:left-[calc(50%+10rem)] md:-translate-x-1/2 md:bottom-8 bg-white/95 md:bg-white/80 md:backdrop-blur-xl border-t md:border border-[#E0CFC3] pb-safe pt-2 md:py-2 px-4 md:px-6 flex justify-between md:justify-center md:gap-8 z-40 md:rounded-full md:shadow-[0_20px_40px_rgba(43,52,69,0.15)] transition-all">
-                <TabButton active={activeTab === 'flights'} onClick={() => setActiveTab('flights')} icon={<Plane className="w-6 h-6 md:w-5 md:h-5" />} label="航班" />
-                <TabButton active={activeTab === 'itinerary'} onClick={() => setActiveTab('itinerary')} icon={<Calendar className="w-6 h-6 md:w-5 md:h-5" />} label="行程" />
-                <TabButton active={activeTab === 'notes'} onClick={() => setActiveTab('notes')} icon={<FileText className="w-6 h-6 md:w-5 md:h-5" />} label="提醒" />
-                <TabButton active={activeTab === 'checklist'} onClick={() => setActiveTab('checklist')} icon={<CheckSquare className="w-6 h-6 md:w-5 md:h-5" />} label="待辦" />
-              </div>
+  <!-- Day 8 -->
+  <div class="day-card" data-day="8">
+    <img class="day-card-img" src="https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=600&q=70" alt="機場">
+    <div class="day-header" onclick="toggleDay(this)">
+      <div class="day-badge">8</div>
+      <div class="day-info">
+        <div class="day-meta">5/15 (五)</div>
+        <div class="day-title">完美句點</div>
+      </div>
+      <span style="color:var(--text-secondary);font-size:20px">🏠</span>
+    </div>
+    <div class="day-tags">
+      <span class="tag transport">✈ 飛機</span>
+      <span class="tag">🏠 溫暖的家</span>
+      <span class="tag highlight">★ 蔬琪・雅雅返程</span>
+    </div>
+    <button class="expand-btn" onclick="toggleDay(this.closest('.day-card').querySelector('.day-header'))">
+      查看行程 <span class="expand-icon">▼</span>
+    </button>
+    <div class="day-timeline">
+      <div class="timeline-item">
+        <div class="timeline-time">上午</div>
+        <div class="timeline-dot key"></div>
+        <div class="timeline-content">
+          <div class="timeline-event">The Matcha Tokyo 51A</div>
+          <a href="https://maps.app.goo.gl/Wo893WuXVeji49py5" target="_blank" class="timeline-link">🗺 查看地圖</a>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-time">移動</div>
+        <div class="timeline-dot"></div>
+        <div class="timeline-content"><div class="timeline-event">前往機場</div></div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-time">起飛</div>
+        <div class="timeline-dot key"></div>
+        <div class="timeline-content"><div class="timeline-event">揮揮手！回家！✈️🏠</div></div>
+      </div>
+    </div>
+  </div>
 
-              {/* --- Veg Modal --- */}
-              {showVegCard && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#2B3445]/80 p-6 backdrop-blur-sm animate-in fade-in" onClick={() => setShowVegCard(false)}>
-                  <div className="bg-white p-6 md:p-8 rounded-2xl w-full max-w-md shadow-2xl transform transition-all scale-100 border-4 border-[#E94D34]" onClick={e => e.stopPropagation()}>
-                    <div className="flex justify-between items-center mb-6 border-b border-[#E0CFC3] pb-4">
-                      <h3 className="text-2xl font-black text-[#2B3445]">飲食需求卡</h3>
-                      <button onClick={() => setShowVegCard(false)} className="p-2 bg-[#E0CFC3]/30 rounded-full hover:bg-[#E0CFC3] transition-colors">
-                        <X className="w-5 h-5 text-[#2B3445]" />
-                      </button>
-                    </div>
-                    
-                    <div className="space-y-6">
-                      <div className="p-5 bg-[#F5EFE9] rounded-xl border-l-4 border-[#E94D34]">
-                        <p className="text-xs text-[#2B3445]/50 mb-2 uppercase tracking-wider font-bold">Japanese</p>
-                        <p className="text-xl font-bold text-[#2B3445] leading-relaxed">
-                          すみません、<br/>ネギや玉ねぎ、にんにくなど<br/>入っていますか。<br/>それも食べられませんので、<br/>入っていれば、抜いていただけませんか。
-                        </p>
-                      </div>
-                      
-                      <div className="p-5 bg-white rounded-xl border border-[#E0CFC3] border-l-4 border-l-[#2B3445]">
-                        <p className="text-xs text-[#2B3445]/50 mb-2 uppercase tracking-wider font-bold">Chinese</p>
-                        <p className="text-base font-medium text-[#2B3445]">
-                          不好意思，請問有加蔥、洋蔥或大蒜嗎？<br/>這些我也沒辦法吃。<br/>如果有的話，可以幫我拿掉嗎？
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        }
+</div><!-- /panel-itinerary -->
 
-        const root = createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
+
+<!-- ═══════════ PANEL: HOTELS ═══════════ -->
+<div class="panel" id="panel-hotels">
+
+  <div class="sec-header" style="margin-top:8px;">
+    <h2>住宿資訊</h2>
+  </div>
+
+  <div class="hotel-card">
+    <img class="hotel-img" src="https://images.unsplash.com/photo-1582719508461-905c673771fd?w=600&q=70" alt="Cherim Hakata">
+    <div class="hotel-body">
+      <div class="hotel-name">Cherim Hakata</div>
+      <div class="hotel-pills">
+        <span class="hotel-pill">📍 博多</span>
+        <span class="hotel-pill">🚇 近地鐵</span>
+        <span class="hotel-pill">🛏 舒適住宿</span>
+      </div>
+    </div>
+    <div class="hotel-footer">
+      <div class="hotel-dates">📅 5/8（五）— 5/10（日）</div>
+      <span class="hotel-badge">2 晚</span>
+    </div>
+  </div>
+
+  <div class="hotel-card">
+    <img class="hotel-img" src="https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=600&q=70" alt="由布院野菊旅館">
+    <div class="hotel-body">
+      <div class="hotel-name">由布院旅館・野菊</div>
+      <div class="hotel-pills">
+        <span class="hotel-pill">📍 由布院</span>
+        <span class="hotel-pill">♨️ 溫泉</span>
+        <span class="hotel-pill">🌿 山景</span>
+      </div>
+    </div>
+    <div class="hotel-footer">
+      <div class="hotel-dates">📅 5/10（日）— 5/11（一）</div>
+      <span class="hotel-badge">1 晚</span>
+    </div>
+  </div>
+
+  <div class="hotel-card">
+    <img class="hotel-img" src="https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=600&q=70" alt="博多市區">
+    <div class="hotel-body">
+      <div class="hotel-name">博多市區住宿</div>
+      <div class="hotel-pills">
+        <span class="hotel-pill">📍 博多</span>
+        <span class="hotel-pill">🛒 購物方便</span>
+        <span class="hotel-pill">🍜 美食圈</span>
+      </div>
+    </div>
+    <div class="hotel-footer">
+      <div class="hotel-dates">📅 5/11（一）— 5/15（五）</div>
+      <span class="hotel-badge">4 晚</span>
+    </div>
+  </div>
+
+  <!-- Transport: Rental Car -->
+  <div class="sec-header" style="margin-top:24px;">
+    <h2>租車資訊</h2>
+  </div>
+  <div class="transport-card">
+    <div class="transport-header">
+      <div class="transport-sidebar">KS RENT A CAR</div>
+      <div class="transport-body">
+        <div class="transport-route">
+          <div class="t-code">FUK</div>
+          <div class="t-arrow">
+            <div class="t-arrow-line"></div>
+            🚗
+            <div class="t-arrow-line"></div>
+          </div>
+          <div class="t-code">FUK</div>
+        </div>
+        <div class="transport-details">
+          <span class="t-chip">📋 訂單：YGZ202175</span>
+          <span class="t-chip">📅 5/10 10:00 取車</span>
+          <span class="t-chip">📅 5/11 20:00 還車</span>
+          <span class="t-chip">📞 81+8098570393</span>
+          <span class="t-chip">⏰ 營業：08:00–20:00</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /panel-hotels -->
+
+
+<!-- ═══════════ PANEL: CHECKLIST ═══════════ -->
+<div class="panel" id="panel-checklist">
+
+  <div class="sec-header" style="margin-top:8px;">
+    <h2>行前待辦</h2>
+    <div class="badge" id="pctBadge">0%</div>
+  </div>
+
+  <div class="progress-label">
+    <span>整體進度</span>
+    <span id="pctText">0 / 11 完成</span>
+  </div>
+  <div class="progress-bar-wrap">
+    <div class="progress-bar" id="progressBar" style="width:0%"></div>
+  </div>
+
+  <div id="checklist-container"></div>
+
+</div><!-- /panel-checklist -->
+
+
+<!-- ═══════════ PANEL: TIPS ═══════════ -->
+<div class="panel" id="panel-tips">
+
+  <div class="sec-header" style="margin-top:8px;">
+    <h2>注意事項</h2>
+  </div>
+
+  <!-- Veg Card -->
+  <div class="veg-card" onclick="openVeg()">
+    <div class="veg-badge">🍽 飲食溝通</div>
+    <h3>飲食需求卡</h3>
+    <p>"不好意思，有蔥、洋蔥還有大蒜嗎⋯⋯" — 點擊放大顯示給店員</p>
+  </div>
+
+  <!-- Drive Guide -->
+  <div class="guide-card open" id="guideCard">
+    <div class="guide-header" onclick="toggleGuide()">
+      <span class="guide-icon">⚠️</span>
+      <div class="guide-title">日本駕駛十條鐵律</div>
+      <span class="guide-toggle">▼</span>
+    </div>
+    <div class="guide-body">
+      <div class="guide-grid">
+        <div class="guide-item">
+          <div class="guide-num">01</div>
+          <div class="guide-item-title">靠左行駛</div>
+          <div class="guide-desc">謹記「左小彎、右大彎」，轉彎後不要開錯車道。</div>
+        </div>
+        <div class="guide-item">
+          <div class="guide-num">02</div>
+          <div class="guide-item-title">止まれ</div>
+          <div class="guide-desc">倒三角標誌，輪胎必須「完全靜止」3 秒，確認左右再開！</div>
+        </div>
+        <div class="guide-item">
+          <div class="guide-num">03</div>
+          <div class="guide-item-title">禮讓行人</div>
+          <div class="guide-desc">轉彎時若有人行道，必須停車讓行人先過。</div>
+        </div>
+        <div class="guide-item">
+          <div class="guide-num">04</div>
+          <div class="guide-item-title">右轉待轉</div>
+          <div class="guide-desc">綠燈右轉時需進路口中央待轉，禮讓對向直行車。</div>
+        </div>
+        <div class="guide-item">
+          <div class="guide-num">05</div>
+          <div class="guide-item-title">右轉箭頭</div>
+          <div class="guide-desc">有右轉專用箭頭時，需等綠色箭頭才可右轉。</div>
+        </div>
+        <div class="guide-item">
+          <div class="guide-num">06</div>
+          <div class="guide-item-title">黃燈判斷</div>
+          <div class="guide-desc">日本黃燈秒數短，看到請準備停車，切勿搶快。</div>
+        </div>
+        <div class="guide-item">
+          <div class="guide-num">07</div>
+          <div class="guide-item-title">平交道</div>
+          <div class="guide-desc">通過前完全停止，開車窗聽聲音確認無火車。</div>
+        </div>
+        <div class="guide-item">
+          <div class="guide-num">08</div>
+          <div class="guide-item-title">方向燈位置</div>
+          <div class="guide-desc">日系右駕車通常右手打方向燈、左手雨刷。</div>
+        </div>
+        <div class="guide-item">
+          <div class="guide-num">09</div>
+          <div class="guide-item-title">閃大燈禮儀</div>
+          <div class="guide-desc">對向閃大燈 = 「禮讓你先過」，與台灣相反！</div>
+        </div>
+        <div class="guide-item">
+          <div class="guide-num">10</div>
+          <div class="guide-item-title">嚴禁違停</div>
+          <div class="guide-desc">罰金極高，務必尋找收費停車場 (P)。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /panel-tips -->
+
+
+<!-- ── Veg Modal ── -->
+<div class="modal-backdrop" id="vegModal" onclick="closeVeg(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>飲食需求卡</h3>
+      <button class="modal-close" onclick="closeVeg()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="veg-block jp">
+        <div class="veg-lang">JAPANESE</div>
+        <div class="veg-text-jp">
+          すみません、<br>ネギや玉ねぎ、にんにくなど<br>入っていますか。<br>それも食べられませんので、<br>入っていれば、抜いていただけませんか。
+        </div>
+      </div>
+      <div class="veg-block zh">
+        <div class="veg-lang">CHINESE</div>
+        <div class="veg-text-zh">
+          不好意思，請問有加蔥、洋蔥或大蒜嗎？<br>這些我也沒辦法吃。<br>如果有的話，可以幫我拿掉嗎？
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+// ── 本地補充資料（連結、備註）──
+const localMeta = {
+  "Visit Japan Web 入境表單": { link: "https://www.vjw.digital.go.jp/main/#/vjwplo001" },
+  "KLOOK 租車":               { link: "https://www.klook.com/zh-TW/", details: "推薦方案：TEP (ToCoo! Expressway Pass)，包含福岡/北九州都市高速。ETC卡通常寄送至機場郵局或首晚飯店，歸還需使用回郵信封。" },
+  "購買 eSIM":                { link: "https://www.klook.com/zh-TW/" },
+  "預約 teamLab 門票":        { link: "https://www.klook.com/zh-TW/" },
+  "預約 Robata no Ito Okashi":{ link: "https://www.tablecheck.com/zh-TW/robatano-itookashi/reserve/landing?utm_source=google" },
+};
+
+let checklist = [];
+
+// ── 從 checklist.json 讀取（GitHub Actions 每 30 分鐘從 Notion 同步）──
+async function loadFromNotion() {
+  showChecklistLoading(true);
+  try {
+    // 加 timestamp 避免瀏覽器快取
+    const res = await fetch(`checklist.json?t=${Date.now()}`);
+    if (!res.ok) throw new Error("無法讀取 checklist.json");
+    const data = await res.json();
+
+    // 合併本地 override（打勾狀態用 localStorage 暫存，等 Actions 同步回來）
+    const localOverride = JSON.parse(localStorage.getItem('checklist-override') || '{}');
+
+    checklist = data.map(item => {
+      const meta = localMeta[item.text] || {};
+      const checked = localOverride[item.pageId] !== undefined
+        ? localOverride[item.pageId]
+        : item.checked;
+      return { ...item, checked, link: meta.link, details: meta.details };
+    });
+
+    renderChecklist();
+  } catch(e) {
+    console.error("載入失敗:", e);
+    document.getElementById('checklist-container').innerHTML = `
+      <div style="text-align:center;padding:32px;color:var(--text-secondary)">
+        <div style="font-size:32px;margin-bottom:12px">⚠️</div>
+        <div style="font-weight:700;margin-bottom:6px">載入失敗</div>
+        <div style="font-size:12px">請重新整理頁面，或確認 GitHub Actions 已執行</div>
+      </div>`;
+  }
+  showChecklistLoading(false);
+}
+
+function showChecklistLoading(show) {
+  if (show) {
+    document.getElementById('checklist-container').innerHTML = `
+      <div style="text-align:center;padding:48px;color:var(--text-secondary)">
+        <div style="font-size:28px;margin-bottom:12px;animation:spin 1s linear infinite;display:inline-block">⟳</div>
+        <div style="font-size:13px;font-weight:600">載入中…</div>
+      </div>`;
+  }
+}
+
+// ── 打勾：存入 localStorage，同時觸發 GitHub Actions 更新 Notion ──
+async function updateNotionCheck(pageId, checked) {
+  // 1. 存入 localStorage（立即生效，不受 Actions 同步週期影響）
+  const override = JSON.parse(localStorage.getItem('checklist-override') || '{}');
+  override[pageId] = checked;
+  localStorage.setItem('checklist-override', JSON.stringify(override));
+
+  // 2. 觸發 GitHub Actions workflow_dispatch 更新 Notion
+  const GH_TOKEN = "";  // 若填入 GitHub PAT 可即時更新，否則等 30 分鐘自動同步
+  if (!GH_TOKEN) return;
+  try {
+    await fetch("https://api.github.com/repos/weiru0314-design/fuk-trip/dispatches", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${GH_TOKEN}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        event_type: "update-notion",
+        client_payload: { pageId, checked }
+      })
+    });
+  } catch(e) { console.warn("GitHub dispatch 失敗，將於下次自動同步"); }
+}
+
+function renderChecklist() {
+  const container = document.getElementById('checklist-container');
+  const done = checklist.filter(i=>i.checked).length;
+  const total = checklist.length;
+  const pct = total ? Math.round(done/total*100) : 0;
+  document.getElementById('progressBar').style.width = pct+'%';
+  document.getElementById('pctBadge').textContent = pct+'%';
+  document.getElementById('pctText').textContent = done+' / '+total+' 完成';
+
+  container.innerHTML = checklist.map((item, idx) => `
+    <div class="check-item${item.checked?' done':''}" onclick="toggleCheck(${idx})">
+      <div class="check-box${item.checked?' checked':''}"></div>
+      <div style="flex:1">
+        <div class="check-text">${item.text}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
+          <span class="check-cat">${item.category}</span>
+          ${item.link ? `<a href="${item.link}" target="_blank" onclick="event.stopPropagation()" class="check-link">🔗 前往連結</a>` : ''}
+          ${item.details ? `<button onclick="event.stopPropagation();toggleCheckDetails('cd-${idx}')" style="background:var(--cream-dark);border:none;cursor:pointer;border-radius:99px;font-size:10px;padding:3px 10px;color:var(--text-secondary);font-weight:700">ℹ 詳情</button>` : ''}
+        </div>
+        ${item.details ? `<div class="check-details" id="cd-${idx}">${item.details}</div>` : ''}
+      </div>
+      ${item.syncing ? `<span style="font-size:18px;animation:spin 0.8s linear infinite;display:inline-block;color:var(--olive)">⟳</span>` : ''}
+    </div>
+  `).join('');
+}
+
+async function toggleCheck(idx) {
+  const item = checklist[idx];
+  const newChecked = !item.checked;
+
+  // 樂觀更新 UI
+  checklist[idx] = { ...item, checked: newChecked, syncing: true };
+  renderChecklist();
+
+  // 同步到 Notion
+  await updateNotionCheck(item.pageId, newChecked);
+
+  checklist[idx].syncing = false;
+  renderChecklist();
+}
+
+function toggleCheckDetails(id) {
+  const el = document.getElementById(id);
+  if(el) el.classList.toggle('open');
+}
+
+// ── TABS ──
+const tabs = document.querySelectorAll('.tab-btn');
+const panels = document.querySelectorAll('.panel');
+let notionLoaded = false;
+tabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    tabs.forEach(t => t.classList.remove('active'));
+    panels.forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-'+tab.dataset.panel).classList.add('active');
+    // 第一次點待辦分頁時從 Notion 載入
+    if(tab.dataset.panel === 'checklist' && !notionLoaded) {
+      notionLoaded = true;
+      loadFromNotion();
+    }
+    window.scrollTo({top: document.querySelector('.overview').offsetTop - 10, behavior:'smooth'});
+  });
+});
+
+// ── STICKY NAV ──
+window.addEventListener('scroll', () => {
+  document.getElementById('topNav').classList.toggle('scrolled', window.scrollY > 60);
+});
+
+// ── HERO IMAGE ──
+const heroImg = document.getElementById('heroImg');
+heroImg.addEventListener('load', () => heroImg.classList.add('loaded'));
+if(heroImg.complete) heroImg.classList.add('loaded');
+
+// ── SCROLL REVEAL ──
+const sections = document.querySelectorAll('.section');
+const revealObs = new IntersectionObserver(entries => {
+  entries.forEach(e => e.target.classList.toggle('visible', e.isIntersecting));
+}, { threshold: 0.05 });
+sections.forEach(s => revealObs.observe(s));
+// Trigger once for above-fold
+setTimeout(() => sections.forEach(s => {
+  const rect = s.getBoundingClientRect();
+  if(rect.top < window.innerHeight) s.classList.add('visible');
+}), 100);
+
+// ── DAY ACCORDION ──
+function toggleDay(header) {
+  const card = header.closest('.day-card');
+  const timeline = card.querySelector('.day-timeline');
+  const isOpen = card.classList.contains('open');
+  card.classList.toggle('open', !isOpen);
+  if(timeline) timeline.classList.toggle('open', !isOpen);
+}
+
+// ── GUIDE ──
+function toggleGuide() {
+  document.getElementById('guideCard').classList.toggle('open');
+}
+
+// ── FLIGHT TOGGLE ──
+function switchFlight(who) {
+  document.getElementById('btnMe').classList.toggle('active', who==='me');
+  document.getElementById('btnOthers').classList.toggle('active', who==='others');
+  document.getElementById('inbound-me').style.display = who==='me'?'block':'none';
+  document.getElementById('inbound-others').style.display = who==='others'?'block':'none';
+}
+
+// ── VEG MODAL ──
+function openVeg() { document.getElementById('vegModal').classList.add('open'); }
+function closeVeg(e) {
+  if(!e || e.target===document.getElementById('vegModal')) {
+    document.getElementById('vegModal').classList.remove('open');
+  }
+}
+
+// ── LIVE DATA ──
+async function fetchLiveData() {
+  // Weather
+  try {
+    const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=33.5904&longitude=130.4017&current_weather=true&timezone=Asia%2FTokyo');
+    if(r.ok) {
+      const d = await r.json();
+      if(d.current_weather) {
+        const codes={0:'晴朗',1:'多雲',2:'多雲',3:'多雲',45:'有霧',48:'有霧',51:'有雨',61:'有雨',80:'雷雨'};
+        const desc = Object.entries(codes).sort((a,b)=>b[0]-a[0]).find(([c])=>d.current_weather.weathercode>=+c)?.[1] || '晴朗';
+        document.getElementById('tempVal').textContent = Math.round(d.current_weather.temperature)+'°C';
+        document.getElementById('tempDesc').textContent = desc;
+      }
+    }
+  } catch(e) {
+    document.getElementById('tempVal').textContent = '--°C';
+    document.getElementById('tempDesc').textContent = '無法取得';
+  }
+
+  // Exchange rate
+  try {
+    const r = await fetch('https://api.frankfurter.app/latest?from=JPY&to=TWD');
+    if(r.ok) {
+      const d = await r.json();
+      if(d?.rates?.TWD) document.getElementById('rateVal').textContent = d.rates.TWD.toFixed(3);
+    }
+  } catch(e) {
+    document.getElementById('rateVal').textContent = '--';
+  }
+
+  // Countdown
+  const trip = new Date('2026-05-08T06:40:00');
+  const diff = Math.ceil((trip - new Date()) / 86400000);
+  document.getElementById('countVal').textContent = diff > 0 ? diff : '出發啦！';
+}
+fetchLiveData();
+
+// ── INIT ── (Notion 載入由 tab 切換觸發)
+</script>
 </body>
 </html>
