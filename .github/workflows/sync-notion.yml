@@ -2,8 +2,8 @@ name: Sync Notion Checklist
 
 on:
   schedule:
-    - cron: '*/30 * * * *'  # 每 30 分鐘自動同步
-  workflow_dispatch:          # 允許手動觸發
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
   push:
     branches: [main]
 
@@ -28,32 +28,48 @@ jobs:
             -d '{"sorts":[{"property":"分類","direction":"ascending"}]}' \
             > raw.json
 
-          python3 - <<'EOF'
-          import json
+          python3 - << 'EOF'
+import json, sys
 
-          with open("raw.json") as f:
-              data = json.load(f)
+with open('raw.json') as f:
+    data = json.load(f)
 
-          items = []
-          for page in data.get("results", []):
-              props = page["properties"]
-              name = props.get("待辦事項", {}).get("title", [{}])
-              name = name[0].get("plain_text", "") if name else ""
-              checked = props.get("完成狀態", {}).get("checkbox", False)
-              category = props.get("分類", {}).get("select", {})
-              category = category.get("name", "") if category else ""
-              items.append({
-                  "pageId": page["id"],
-                  "text": name,
-                  "checked": checked,
-                  "category": category
-              })
+results = data.get('results', [])
+print(f'找到 {len(results)} 筆資料', file=sys.stderr)
 
-          with open("checklist.json", "w", encoding="utf-8") as f:
-              json.dump(items, f, ensure_ascii=False, indent=2)
+items = []
+for page in results:
+    props = page.get('properties', {})
 
-          print(f"✅ 已同步 {len(items)} 筆待辦事項")
-          EOF
+    # 標題欄位
+    title_prop = props.get('待辦事項', {})
+    title_list = title_prop.get('title', [])
+    name = title_list[0].get('plain_text', '') if title_list else ''
+
+    # checkbox
+    checked = props.get('完成狀態', {}).get('checkbox', False)
+
+    # 分類
+    select = props.get('分類', {}).get('select') or {}
+    category = select.get('name', '')
+
+    print(f'  {name} | {category} | {checked}', file=sys.stderr)
+
+    items.append({
+        'pageId': page['id'],
+        'text': name,
+        'checked': checked,
+        'category': category
+    })
+
+with open('checklist.json', 'w') as f:
+    json.dump(items, f, ensure_ascii=False, indent=2)
+
+print(f'✅ 完成，共 {len(items)} 筆', file=sys.stderr)
+EOF
+
+          echo "--- checklist.json ---"
+          cat checklist.json
 
       - name: Commit updated checklist
         run: |
