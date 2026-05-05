@@ -17,7 +17,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Fetch Notion Checklist
+      - name: Fetch and parse Notion data
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
         run: |
@@ -26,52 +26,14 @@ jobs:
             -H "Content-Type: application/json" \
             -H "Notion-Version: 2022-06-28" \
             -d '{"sorts":[{"property":"分類","direction":"ascending"}]}' \
-            > raw.json
+            -o raw.json
 
-          python3 - << 'EOF'
-import json, sys
+          python3 parse_notion.py
 
-with open('raw.json') as f:
-    data = json.load(f)
-
-results = data.get('results', [])
-print(f'找到 {len(results)} 筆資料', file=sys.stderr)
-
-items = []
-for page in results:
-    props = page.get('properties', {})
-
-    # 標題欄位
-    title_prop = props.get('待辦事項', {})
-    title_list = title_prop.get('title', [])
-    name = title_list[0].get('plain_text', '') if title_list else ''
-
-    # checkbox
-    checked = props.get('完成狀態', {}).get('checkbox', False)
-
-    # 分類
-    select = props.get('分類', {}).get('select') or {}
-    category = select.get('name', '')
-
-    print(f'  {name} | {category} | {checked}', file=sys.stderr)
-
-    items.append({
-        'pageId': page['id'],
-        'text': name,
-        'checked': checked,
-        'category': category
-    })
-
-with open('checklist.json', 'w') as f:
-    json.dump(items, f, ensure_ascii=False, indent=2)
-
-print(f'✅ 完成，共 {len(items)} 筆', file=sys.stderr)
-EOF
-
-          echo "--- checklist.json ---"
+          echo "=== checklist.json ==="
           cat checklist.json
 
-      - name: Commit updated checklist
+      - name: Commit
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
